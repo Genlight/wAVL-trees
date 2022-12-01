@@ -52,4 +52,6 @@ cabal.project.local~
 .history
 .ionide
 
+
+src/.liquid
 # End of https://www.toptal.com/developers/gitignore/api/localstack,haskell,visualstudiocode
