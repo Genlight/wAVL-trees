@@ -19,32 +19,19 @@ extra-source-files:
     README.md
 
 library
-  other-modules:
-      Paths_lhTest
+  exposed-modules:
+    --   WAVL_With_Rankdiff,
+      WAVL_2
+      -- WAVLTree,
+      -- AVL,
+      -- AVL_2
   hs-source-dirs:
       src
-  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -fplugin=LiquidHaskell
---   -Wincomplete-uni-patterns
   build-depends:
       liquid-ghc-prim,
       liquid-base,
       liquid-prelude,
       liquid-containers,
-      liquidhaskell >=0.8.10
+      liquidhaskell
   default-language: Haskell2010
-
-executable lhTest-exe
-  main-is: Main.hs
-  other-modules:
-      Paths_lhTest
-  hs-source-dirs:
-      app
-  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -fplugin=LiquidHaskell -threaded -rtsopts -with-rtsopts=-N
---   -Wincomplete-uni-patterns
-  build-depends:
-      liquid-ghc-prim,
-      liquid-base,
-      liquid-prelude,
-      liquid-containers,
-      liquidhaskell >=0.8.10
-  default-language: Haskell2010
+  ghc-options: -fplugin=LiquidHaskell
