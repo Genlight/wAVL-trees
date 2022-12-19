@@ -21,6 +21,7 @@ extra-source-files:
 library
   exposed-modules:
     --   WAVL_With_Rankdiff,
+      WAVL_1,
       WAVL_2
       -- WAVLTree,
       -- AVL,
