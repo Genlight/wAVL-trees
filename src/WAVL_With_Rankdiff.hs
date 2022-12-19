@@ -10,16 +10,18 @@ module WAVL_With_Rankdiff (Tree, initialT, insert) where
 
 
 -- Basic functions
-{-@ data Tree [plen] @-}
+{-@ data Tree [ht] @-}
 data Tree a = Nil Int | Tree a Int (Tree a) (Tree a) deriving Show
 
-{-@ type RankDiff = {v:Int |  0 <= v && v <= 2 }  @-} -- TODO: change back to <= 3
+{-@ type RankDiff = {v:Int |  0 <= v && v <= 3 }  @-} -- TODO: change back to <= 3
+{-@ type NilRank = {v:Int |  1 <= v && v <= 2 }  @-} 
 
 -- pathlength
 {-@ measure plen @-}
 {-@ plen :: Tree a -> Nat @-}
 plen              :: Tree a -> Int
-plen (Nil n)         = n
+plen (Nil 1)         = 0
+plen (Nil 2)         = 1
 plen (Tree _ n l _) = n + plen l
 
 {-@ measure ht @-}
@@ -40,14 +42,19 @@ htDiff l r = ht l - ht r
 initialT :: a -> Tree a
 initialT a = singleton a 0
 
-{-@ singleton :: a -> {v:RankDiff | v== 0 || v == 1} -> Wavl @-}
+{-@ emp :: {t:Wavl | plen t == 1 } @-}
+emp = Nil 1
+
+{-@ singleton :: a -> {v:RankDiff | v== 0 || v == 1 } -> Wavl @-}
 singleton :: a -> Int -> Tree a
 singleton a n = Tree a n (Nil 1) (Nil 1)
 
 {-@ measure notEmptyTree :: Tree a -> Bool @-}
 notEmptyTree :: Tree a -> Bool
+notEmptyTree (Tree _ _ _ _) = True
 notEmptyTree (Nil _) = False
-notEmptyTree _ = True
+
+{-@ type NETree = {t:Tree | notEmptyTree t } @-}
 
 {-@ type Node0_1 = { v:AlmostWavl | notEmptyTree v && (rd (left v) == 0 && rd (right v) == 1) } @-}
 {-@ type Node1_0 = { v:AlmostWavl | notEmptyTree v && (rd (left v) == 1 && rd (right v) == 0) } @-}
@@ -109,7 +116,7 @@ promoteL a n (Tree al 0 ll lr) (Tree ar 1 rl rr) = (Tree a (n-1) (Tree al 1 ll l
 
 
 {-@ rotateRight :: a -> RdNode -> {l:Node1_2 | rd l == 0} -> {r:Wavl | rd r == 2} -> Wavl @-}
-rotateRight :: a -> Int -> Tree a -> Tree a -> Tree a
+rotateRight :: (Ord a) => a -> Int -> Tree a -> Tree a -> Tree a
 rotateRight x n (Tree y 0 a@(Tree _ 1 _ _) (Tree bv 2 bl br)) (Tree z 2 c d) = Tree y n a (Tree x 1 (Tree bv 1 bl br) (Tree z 1 c d))
 rotateRight x n (Tree y 0 a@(Tree _ 1 _ _) (Tree bv 2 bl br)) (Nil 2)        = Tree y n a (Tree x 1 (Tree bv 1 bl br) (Nil 1))
 rotateRight x n (Tree y 0 a@(Tree _ 1 _ _) (Nil 2)) (Tree z 2 c d)           = Tree y n a (Tree x 1 (Nil 1) (Tree z 1 c d))
@@ -117,7 +124,7 @@ rotateRight x n (Tree y 0 a@(Tree _ 1 _ _) (Nil 2)) (Nil 2)                  = T
 rotateRight _ _ _ _ = error "Tree did not match criteria"
 
 {-@ rotateLeft :: a -> RdNode -> {l:Wavl | rd l == 2} -> {r:Node2_1 | rd r == 0} -> Wavl @-}
-rotateLeft :: a -> Int -> Tree a -> Tree a -> Tree a
+rotateLeft :: (Ord a) => a -> Int -> Tree a -> Tree a -> Tree a
 rotateLeft x n a@(Tree av 2 al ar) (Tree y 0 (Tree bv 2 bl br) c@(Tree _ 1 _ _)) = Tree y n (Tree x 1 (Tree av 1 al ar) (Tree bv 1 bl br)) c
 rotateLeft x n a@(Tree av 2 al ar) (Tree y 0 (Nil 2) c@(Tree _ 1 _ _)) = Tree y n (Tree x 1 (Tree av 1 al ar) (Nil 1)) c
 rotateLeft x n (Nil 2) (Tree y 0 (Tree bv 2 bl br) c@(Tree _ 1 _ _)) = Tree y n (Tree x 1 (Nil 1) (Tree bv 1 bl br)) c
@@ -125,7 +132,7 @@ rotateLeft x n (Nil 2) (Tree y 0 (Nil 2) c@(Tree _ 1 _ _)) = Tree y n (Tree x 1 
 rotateLeft _ _ _ _ = error "Tree did not match criteria"
 
 {-@ rotateDoubleRight :: a -> RdNode -> {l:Node1_2 | rd l == 0 } -> {r:Wavl | rd r == 2 } -> Wavl @-}
-rotateDoubleRight :: a -> Int -> Tree a -> Tree a -> Tree a
+rotateDoubleRight :: (Ord a) => a -> Int -> Tree a -> Tree a -> Tree a
 rotateDoubleRight x n (Tree y 0 (Tree av 2 al ar) (Tree z 1 b_1 b_2)) (Tree cv 2 cl cr) = Tree z n (Tree y 1 (Tree av 1 al ar) b_1) (Tree x 1 b_2 (Tree cv 1 cl cr)) 
 rotateDoubleRight x n (Tree y 0 (Tree av 2 al ar) (Tree z 1 b_1 b_2)) (Nil 2)           = Tree z n (Tree y 1 (Tree av 1 al ar) b_1) (Tree x 1 b_2 (Nil 1)) 
 rotateDoubleRight x n (Tree y 0 (Nil 2) (Tree z 1 b_1 b_2)) c@(Tree cv 2 cl cr)         = Tree z n (Tree y 1 (Nil 1) b_1) (Tree  x 1 b_2 (Tree cv 1 cl cr)) 
@@ -133,7 +140,7 @@ rotateDoubleRight x n (Tree y 0 (Nil 2) (Tree z 1 b_1 b_2)) (Nil 2)             
 rotateDoubleRight _ _ _ _ = error "Tree did not match criteria"
 
 {-@ rotateDoubleLeft :: a -> RdNode -> {l:Wavl | rd l == 2} -> {r:Node1_2 | rd r == 0} -> Wavl @-}
-rotateDoubleLeft :: a -> Int -> Tree a -> Tree a -> Tree a
+rotateDoubleLeft :: (Ord a) => a -> Int -> Tree a -> Tree a -> Tree a
 rotateDoubleLeft x n (Tree av 2 al ar) (Tree y 0 (Tree z 1 b_1 b_2) (Tree cv 2 cl cr)) = Tree z n (Tree x 1 (Tree av 1 al ar) b_1) (Tree y 1 b_2 (Tree cv 1 cl cr)) 
 rotateDoubleLeft x n (Tree av 2 al ar) (Tree y 0 (Tree z 1 b_1 b_2) (Nil 2))           = Tree z n (Tree x 1 (Tree av 1 al ar) b_1) (Tree y 1 b_2 (Nil 1)) 
 rotateDoubleLeft x n (Nil 2) (Tree y 0 (Tree z 1 b_1 b_2) (Tree cv 2 cl cr))           = Tree z n (Tree x 1 (Nil 1) b_1) (Tree y 1 b_2 (Tree cv 1 cl cr)) 
@@ -184,12 +191,12 @@ balanced' (Tree _ n l r) = 1 <= n && n <= 2
 {-@ type AlmostWavl = {t:Tree | (not (notEmptyTree t) || (balanced (left t) && balanced (right t))) } @-}
 
 
-{-@ measure left :: {t:Tree | notEmptyTree t } -> Tree @-}
+{-@ measure left :: NETree -> Tree @-}
 left :: Tree a -> Tree a
 left (Tree _ _ l _) = l
 left (Nil _) = error "Nothing to return"
 
-{-@ measure right :: {t:Tree | notEmptyTree t } -> Tree @-}
+{-@ measure right :: NETree -> Tree @-}
 right :: Tree a -> Tree a
 right (Tree _ _ _ r) = r
 right (Nil _) = error "Nothing to return"

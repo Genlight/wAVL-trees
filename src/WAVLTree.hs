@@ -16,15 +16,12 @@ max x y = if x > y then x else y
 
 {-@ type OrdVal = a:Ord @-}
 {-@ type LeafRank = {v:Int | v >= -1 } @-}
-{-@ data Tree a = Leaf | Tree { 
-                      key :: OrdVal,
-                      l    :: TreeL a key,
-                      r    :: TreeR a key,
-                      rank :: LeafRank }
+{-@ data Tree [rk] 
                          @-}
 data Tree a = Leaf | Tree (Tree a) a Int (Tree a) deriving (Show)
 
 {-@ type Wavl a = {v:Tree a | rankbalanced v } @-}
+
 -- invariant section
 {-@ measure notEmptyTree @-}
 notEmptyTree :: Tree a -> Bool
@@ -70,17 +67,18 @@ inv_Rank2Height t@(Tree l _ n r) = nodeHeight t <= n && n <= 2 * nodeHeight t &&
 
 -- {-@ measure height @-}
 {-@ type WavlN a n = {v:Wavl | nodeHeight v == n } @-}
-{-@ singleton :: a -> WavlN a 1 @-}
+{-@ singleton :: a -> t:{WavlN a 0} @-}
 singleton :: a -> Tree a
 singleton x =  (Tree Leaf x 0 Leaf)
 
-{-@ insert :: (Ord a) => Wavl a -> Wavl a @-}
+{-@ insert :: a => Wavl a -> Wavl a @-}
 insert :: (Ord a) => a -> Tree a -> Tree a
 insert x Leaf              = singleton x
 insert x t@(Tree l a n r) 
-    | x < a = balL (Tree (insert x l) a n r)
+    | x < a = balL (Tree (insL x l) a n r)
     | x > a = balR (Tree l a n (insert x r))
     | otherwise = t 
+    where 
 
 -- add it as a measure or inline
 {-@ measure rk @-}
