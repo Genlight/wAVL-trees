@@ -1,7 +1,7 @@
 -- {-@ LIQUID "--counter-examples" @-}
 {-@ LIQUID "--short-names" @-}
 
-module WAVL_2 (Tree, singleton
+module WAVL (Tree, singleton
 --  insert,
  ) where
 

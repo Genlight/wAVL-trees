@@ -20,12 +20,9 @@ extra-source-files:
 
 library
   exposed-modules:
-    --   WAVL_With_Rankdiff,
-      WAVL_1,
-      WAVL_2
-      -- WAVLTree,
-      -- AVL,
-      -- AVL_2
+    --   WAVL_With_RankDiffs,     
+    --   AVL,
+      WAVL 
   hs-source-dirs:
       src
   build-depends:
