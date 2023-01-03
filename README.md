@@ -2,8 +2,26 @@
 
 I showed via the LiquidHaskell framework that my functional Implementation of the wAVL trees are functional correct for insert (and delete, TODO). 
 
+# Watch out for's of LiquidHaskell
 
-# Special cases because of LiquidHaskell
+## function annotation
+
+in a function annotation we can use the input to refine the output, and vice versa. Like this: 
+
+```haskell
+{-@ merge :: x:a -> l:Wavl -> r:Wavl -> {v:Rank | WavlRankN v l r }  -> t:Wavl @-}
+```
+
+But LiquidHaskell will not accept the following and throws an unbound Sort Refinement Error: 
+```haskell
+{-@ merge :: x:a -> {v:Rank | WavlRankN v l r } -> l:Wavl -> r:Wavl -> t:Wavl @-}
+```
+This is a LiquidHaskell implementation detail. In a function refinement, if you use a variable like l or r before declaration, it will not be accepted. 
+
+
+
+
+## Special cases because of LiquidHaskell
 
 To show correctness of the insert algorithm with LiquidHaskell I had to make some implicit logical knowledge over the structure explicit. 
 E.g. the pattern matching case for the rebalancing in the insert function could look like this: 
@@ -40,7 +58,7 @@ insert x t@(Tree v n l r) = case compare x v of
 ...
 ```
 
-with our (implicit) knowledge over the data structure we know that the otherwise case will never execute. this is because the input to insert will always be legitimate wAVL tree, which is defined via the balanced condition: 
+with our (implicit) knowledge over the data structure we know that the otherwise case will never execute. this is because the input to insert will always be a legitimate wAVL tree, which is defined via the balanced condition: 
 
 ```haskell
 {-@ type Wavl = {v: Tree a | balanced v} @-}
