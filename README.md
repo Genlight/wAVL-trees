@@ -18,9 +18,6 @@ But LiquidHaskell will not accept the following and throws an unbound Sort Refin
 ```
 This is a LiquidHaskell implementation detail. In a function refinement, if you use a variable like l or r before declaration, it will not be accepted. 
 
-
-
-
 ## Special cases because of LiquidHaskell
 
 To show correctness of the insert algorithm with LiquidHaskell I had to make some implicit logical knowledge over the structure explicit. 
