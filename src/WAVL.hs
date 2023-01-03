@@ -119,7 +119,7 @@ rk (Tree _ n _ _) = n
 
 -- {-@ type Rank = {v:Int | v >= -1} @-}
 {-@ type Rank = Int @-}
-{-@ type AlmostWavl = {t:Tree a | (not (notEmptyTree t)) || ((balanced (left t) && balanced (right t))) } @-}
+{-@ type AlmostWavl = {t:Tree a | (not (notEmptyTree t)) || (balanced (left t) && balanced (right t)) } @-}
 
 
 {-@ type Node0_1 = { v:AlmostWavl | notEmptyTree v && (RkDiff v (left v) 0 ) && (RkDiff v (right v) 1) } @-}
@@ -172,17 +172,17 @@ idWavl t = t
 {-@ predicate WavlRankR N L R = rk R < N && N <= rk R + 3
                             && rk L < N && N <= rk L + 2 @-}
 
-{-@ merge :: x:a -> l:Wavl -> r:Wavl -> {v:Rank | WavlRankN v l r }  -> t:Wavl @-}
-merge :: a -> Tree a -> Tree a -> Int ->  Tree a
-merge _ Nil Nil _ = Nil
-merge _ Nil r _  = r
-merge _ l Nil _  = l
-merge x l r n    = (balRDel x l r n)
+-- {-@ merge :: x:a -> l:Wavl -> r:Wavl -> {v:Rank | WavlRankN v l r }  -> t:Wavl @-}
+-- merge :: a -> Tree a -> Tree a -> Int ->  Tree a
+-- merge _ Nil Nil _ = Nil
+-- merge _ Nil r _  = r
+-- merge _ l Nil _  = l
+-- merge x l r n    = (balRDel x l r n)
 -- merge x l r n    = (balRDel y l r' n)
 --   where
   --  (r', y)     = getMin r
 
--- get the inorder follow up node 
+-- get the inorder successor node 
 -- {-@  getMin :: {v:Wavl | notEmptyTree v} -> ({t:Wavl | (EqRk v t) || (RkDiff v t 1) }, a) @-} 
 -- getMin :: Tree a -> (Tree a, a)
 -- getMin (Tree x _ Nil r) = (r, x)
@@ -190,19 +190,20 @@ merge x l r n    = (balRDel x l r n)
 --   where
 --     (l', x')             = getMin l
 
-{-@ balLDel :: a -> l:Wavl -> r:Wavl -> {n:Rank | WavlRankN n l r} -> t:Wavl  @-}
+{-@ balLDel :: a -> l:Wavl -> r:Wavl -> n:Rank -> {t:Wavl | notEmptyTree t }  @-}
 balLDel :: a -> Tree a -> Tree a -> Int -> Tree a
 balLDel x Nil Nil 1  = singleton x
-balLDel x Nil Nil 0  = singleton x 
-balLDel x l r n  | n <= (rk l) + 2 = t 
-                | n == (rk l) + 3 && (rk r) + 2 == n = demoteL t 
-                | n == (rk l) + 3 && (rk r) + 1 == n && (notEmptyTree r) && (rk (left r)) + 2 == (rk r) && (rk (right r)) + 2 == rk r = doubleDemoteL t
-                | n == (rk l) + 3 && (rk r) + 1 == n && notEmptyTree r && (rk (right r) + 1) == rk r = rotateLeftD t
-                | n == (rk l) + 3 && (rk r) + 1 == n && notEmptyTree r && (rk (right r) + 2) == rk r && (rk (left r)) + 1 == rk r = doubleRotateLeftD t
+balLDel x Nil Nil 0  = singleton x
+balLDel x l r n | n <= (rk l) + 2 = t 
+                | n == (rk l) + 3 && notEmptyTree r && (rk r) + 2 == n  = demoteL t 
+                | n == (rk l) + 3 && (rk r) + 1 == n && (notEmptyTree r) && notEmptyTree (left r) && rk (right r) + 2 == rk r && rk (left r) + 1 == rk r = doubleRotateLeftD (Tree x n l r)
+                | n == (rk l) + 3 && (rk r) + 1 == n && (notEmptyTree r) && rk (left r) + 2 == (rk r) && (rk (right r)) + 2 == rk r = doubleDemoteL t
+                | n == (rk l) + 3 && (rk r) + 1 == n && rk (right r) + 1 == rk r && (notEmptyTree r) && notEmptyTree (right r) = rotateLeftD t
                 | otherwise = t
                   where
                     t = Tree x n l r
 
+-- TODO: exchange WavlRankN for WavlRankR
 {-@ balRDel :: a -> l:Wavl -> r:Wavl -> {n:Rank | WavlRankN n l r} -> t:Wavl @-}
 balRDel :: a -> Tree a -> Tree a -> Int -> Tree a
 balRDel x Nil Nil 1  = singleton x
@@ -216,26 +217,24 @@ balRDel x l r n | n < (rk r + 3) = t
                     where 
                       t = (Tree x n l r)
 
-{-@ predicate RankChild S N = rk S < N && (rk S) + 2 >= N @-}
-
-{-@ demoteL :: s:Node3_2 -> {t:Wavl | RkDiff s t 1} @-}
+{-@ demoteL :: {s:Node3_2 | notEmptyTree (right s)} -> {t:Wavl | RkDiff s t 1 && notEmptyTree t} @-}
 demoteL :: Tree a -> Tree a
 demoteL (Tree a n l r) = Tree a (n - 1) l r
 
-{-@ doubleDemoteL :: {s:Node3_1 | notEmptyTree (right s) && IsNode2_2 (right s) } -> {t:Wavl | RkDiff s t 1 } @-}
+{-@ doubleDemoteL :: {s:Node3_1 | notEmptyTree (right s) && IsNode2_2 (right s) && notEmptyTree (left (right s)) && notEmptyTree (right (right s))} -> {t:Wavl | RkDiff s t 1 && notEmptyTree t} @-}
 doubleDemoteL :: Tree a -> Tree a
 doubleDemoteL (Tree x n l (Tree y m rl rr)) = (Tree x (n-1) l (Tree x (m-1) rl rr))
 
-{-@ rotateLeftD :: {s:Node3_1 | notEmptyTree (right s) && (rk (right (right s))) + 1 == rk (right s) } -> {t:Wavl | EqRk s t} @-}
+{-@ rotateLeftD :: {s:Node3_1 | notEmptyTree (right s) && notEmptyTree (right (right s)) && (rk (right (right s))) + 1 == rk (right s) } -> {t:Wavl | EqRk s t && notEmptyTree t} @-}
 rotateLeftD :: Tree a -> Tree a
-rotateLeftD t@(Tree z n Nil (Tree y m Nil w)) = Tree y (m+1) (Tree z (n-2) Nil Nil) w 
+rotateLeftD t@(Tree z n Nil (Tree y m Nil w)) = Tree y (m+1) (singleton z) w 
 rotateLeftD t@(Tree z n x (Tree y m v w)) = Tree y (m+1) (Tree z (n-1) x v) w 
 
-{-@ doubleRotateLeftD :: {s:Node3_1 | notEmptyTree (right s) && notEmptyTree (left (right s)) && IsNode1_2 (right s) } -> {t:Wavl | EqRk s t} @-}
+{-@ doubleRotateLeftD :: {s:Node3_1 | notEmptyTree (right s) && notEmptyTree (left (right s)) && IsNode1_2 (right s) } -> {t:Wavl | EqRk s t && notEmptyTree t} @-}
 doubleRotateLeftD :: Tree a -> Tree a
 doubleRotateLeftD t@(Tree z n x (Tree y m (Tree v o vl vr) yr)) = Tree v (o+2) (Tree z (n-2) x vl) (Tree y (m-1) vr yr)
 
-{-@ demoteR :: s:Node2_3 -> {t:Wavl | RkDiff s t 1} @-}
+{-@ demoteR :: {s:Node2_3 | notEmptyTree (left s)} -> {t:Wavl | RkDiff s t 1} @-}
 demoteR :: Tree a -> Tree a
 demoteR (Tree a n l r) = Tree a (n - 1) l r
 
