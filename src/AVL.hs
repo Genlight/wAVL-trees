@@ -1,3 +1,5 @@
+-- original source: https://github.com/ucsd-progsys/liquidhaskell/blob/develop/tests/pos/AVL.hs 
+
 {- Example of AVL trees by michaelbeaumont -}
 
 module AVL (Tree, singleton, insert, ht, bFac) where

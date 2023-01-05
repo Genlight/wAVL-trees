@@ -22,7 +22,7 @@ library
   exposed-modules:
     --   WAVL_With_RankDiffs,     
     --   AVL,
-      WAVL 
+      WAVL
   hs-source-dirs:
       src
   build-depends:
