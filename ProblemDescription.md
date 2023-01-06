@@ -25,3 +25,7 @@ I cannot include the notEmptyTree predicate at function refinement level for r a
 
 Is there some other way to propagate the predicates inside a function?
 
+# Problem solution
+After an email correspondence with [Ranjit Jhala](https://github.com/ranjitjhala), one of the core developers of LiquidHaskell, I added a crude solution with the last WIP [commit](https://github.com/Genlight/lhTest/commit/373be42d37f3508039555e65c66e3938470d80b1).
+
+Solution was to add another function, add a precondition in balDelL for `notEmptyTree r` and put that into the function refinement for that sub function. While the function refinement for the sub stayed the same as for `balDelL` I added a notEmptyTree r to it which LH accepted.  
