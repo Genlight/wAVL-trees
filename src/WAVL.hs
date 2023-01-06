@@ -198,16 +198,38 @@ idWavl t = t
 
 {-@ balLDel :: a -> l:Wavl -> {r:Wavl | rk r >= rk l && rk r <= rk l + 2} -> {n:Rank | WavlRankL n l r} -> {t:Wavl | notEmptyTree t }  @-}
 balLDel :: a -> Tree a -> Tree a -> Int -> Tree a
-balLDel x Nil Nil 1  = singleton x
 balLDel x Nil Nil 0  = singleton x
+balLDel x Nil Nil 1  = singleton x
 balLDel x l r n | n <= (rk l) + 2 = t 
-                | n == (rk l) + 3 && notEmptyTree r && (rk r) + 2 == n  = demoteL t 
-                | n == (rk l) + 3 && (rk r) + 1 == n && notEmptyTree (left r) && rk (right r) + 2 == rk r && rk (left r) + 1 == rk r && notEmptyTree r = doubleRotateLeftD (Tree x n l r)
-                | n == (rk l) + 3 && (rk r) + 1 == n && (notEmptyTree r) && (notEmptyTree (left r)) && (notEmptyTree (right r)) && rk (left r) + 2 == (rk r) && (rk (right r)) + 2 == rk r = doubleDemoteL t
-                | n == (rk l) + 3 && (notEmptyTree r) && notEmptyTree (right r) && (rk r) + 1 == n && rk (right r) + 1 == rk r = rotateLeftD t
+                | n == (rk l) + 3 && notEmptyTree r && (rk r) + 2 == n = demoteL t 
+                | notEmptyTree r = doMoreBalL x l r n
                 | otherwise = t
                   where
                     t = Tree x n l r
+                
+
+-- {-@ balLDel :: a -> l:Wavl -> r:Wavl  -> {n:Rank | WavlRankL n l r} -> {t:Wavl | notEmptyTree t }  @-}
+-- balLDel :: Tree a -> Tree a
+-- balLDel t@(Tree x 0 Nil Nil)  = t
+-- balLDel t@(Tree x 1 Nil Nil)  = demoteL
+-- balLDel x Nil r@(Tree ) n = 
+-- balLDel x l r n | 1 <= n && n <= (rk l) + 2 = t 
+--                 | 1 <= n && n == (rk l) + 3 && notEmptyTree r && (rk r) + 2 == n = demoteL t 
+--                 | n == (rk l) + 3 && (rk r) + 1 == n && notEmptyTree r && (not (notEmptyTree r) || (notEmptyTree (left r) && rk (right r) + 2 == rk r && rk (left r) + 1 == rk r)) = doubleRotateLeftD (Tree x n l r)
+--                 | n == (rk l) + 3 && (rk r) + 1 == n && (notEmptyTree r) && (notEmptyTree (left r)) && (notEmptyTree (right r)) && rk (left r) + 2 == (rk r) && (rk (right r)) + 2 == rk r = doubleDemoteL t
+--                 | n == (rk l) + 3 && (notEmptyTree r) && notEmptyTree (right r) && (rk r) + 1 == n && rk (right r) + 1 == rk r = rotateLeftD t
+--                 | otherwise = t
+--                   where
+--                     t = Tree x n l r
+
+{-@ doMoreBalL :: a -> l:Wavl -> {r:Wavl | rk r >= rk l && rk r <= rk l + 2 && notEmptyTree r} -> {n:Rank | WavlRankL n l r} -> {t:Wavl | notEmptyTree t } @-}
+doMoreBalL x l r n 
+  | n == (rk l) + 3 && (rk r) + 1 == n && notEmptyTree r && notEmptyTree (left r) && rk (right r) + 2 == rk r && rk (left r) + 1 == rk r = doubleRotateLeftD (Tree x n l r)
+  | n == (rk l) + 3 && (rk r) + 1 == n && (notEmptyTree r) && (notEmptyTree (left r)) && (notEmptyTree (right r)) && rk (left r) + 2 == (rk r) && (rk (right r)) + 2 == rk r = doubleDemoteL t
+  | n == (rk l) + 3 && (notEmptyTree r) && notEmptyTree (right r) && (rk r) + 1 == n && rk (right r) + 1 == rk r = rotateLeftD t
+  | otherwise = t
+    where 
+      t = Tree x n l r
 
 -- TODO: exchange WavlRankN for WavlRankR
 {-@ balRDel :: a -> l:Wavl -> r:Wavl -> {n:Rank | WavlRankN n l r} -> t:Wavl @-}
