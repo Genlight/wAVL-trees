@@ -51,3 +51,20 @@ Building library for lhTest-0.1.0.0..
     Liquid Type Mismatch
 ...
 ```
+
+# install VS code + Extensions
+install VS code from [the official page](https://code.visualstudio.com/download).
+
+I use the following extensions for my LiquidHaskell workspace: 
+```bash
+$ code --list-extensions
+Extensions installed on WSL: Ubuntu-20.04:
+dramforever.vscode-ghc-simple
+haskell.haskell
+justusadam.language-haskell
+mustafahafidi.liquidhaskell-diagnostics
+ndmitchell.haskell-ghcid
+...
+```
+
+How to install extensions is explained [here](https://code.visualstudio.com/docs/editor/extension-marketplace)

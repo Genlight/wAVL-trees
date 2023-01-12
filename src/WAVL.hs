@@ -1,18 +1,15 @@
 {-@ LIQUID "--short-names" @-}
--- {-@ LIQUID "--exact-data-cons" @-}
--- {-@ LIQUID "--prune-unsorted" @-}
-{-@ LIQUID "--counter-examples" @-}
 
 module WAVL (Tree, singleton,
  insert,
  ) where
 
 -- Basic functions
-{-@ data Tree [ht] a = Nil | Tree { val :: a, 
-                                    rd :: {v:Int | v >= 0}, 
+{-@ data Tree [ht] a = Nil {rd' :: {v:Int | v == (-1)}} | Tree { val :: a, 
+                                    rd :: {v:Int | v >= 0 }, 
                                     left :: Tree a,
                                     right :: Tree a } @-} 
-data Tree a = Nil | Tree { val :: a, rd :: Int, left :: (Tree a), right :: (Tree a)} deriving Show
+data Tree a = Nil {rd' :: Int} | Tree { val :: a, rd :: Int, left :: (Tree a), right :: (Tree a)} deriving Show
 
 {-@ type Wavl = {v: Tree a | balanced v } @-}
 {-@ type NEWavl = {v:Wavl | notEmptyTree v && rk v >= 0 } @-}
@@ -21,20 +18,24 @@ data Tree a = Nil | Tree { val :: a, rd :: Int, left :: (Tree a), right :: (Tree
 {-@ type Rank = {v:Int | v >= -1} @-}
 
 {-@ measure rk @-}
-{-@ rk :: Tree a -> Int @-}
+{-@ rk :: t:Tree a -> {v:Rank | (not (notEmptyTree t) || v >= 0) && (notEmptyTree t || v== (-1))} @-}
 rk :: Tree a -> Int
-rk Nil =  -1
+rk (Nil _) =  -1
 rk t@(Tree _ n _ _) = n -- exchange to "rd t" leads to endless errors ?!
+
+{-@ nil :: {v:Wavl | rk v == (-1) && not (notEmptyTree v) && ht v == (-1)} @-}
+nil :: Tree a
+nil = Nil (-1)
 
 {-@ measure notEmptyTree @-}
 notEmptyTree :: Tree a -> Bool
-notEmptyTree Nil = False
+notEmptyTree (Nil _) = False
 notEmptyTree _ = True
 
 {-@ measure ht @-}
 {-@ ht :: Tree a -> Rank @-}
 ht              :: Tree a -> Int
-ht Nil          = (-1)
+ht (Nil _)          = (-1)
 ht (Tree x n l r) = if (ht l) > (ht r) then (1 + ht l) else (1 + ht r)
 
 {-@ htDiff :: s:Tree a -> t: Tree a -> {v: Int | HtDiff s t v} @-}
@@ -43,7 +44,7 @@ htDiff l r = ht l - ht r
 
 {-@ measure balanced @-}
 balanced :: Tree a -> Bool
-balanced Nil = True
+balanced (Nil _) = True
 balanced t@(Tree _ n l r) = rk r < n && n <= rk r + 2 
                          && rk l < n && n <= rk l + 2
                          && ((notEmptyTree l) || (notEmptyTree r) || (n == 0)) -- disallow 2,2-leafs
@@ -55,21 +56,13 @@ balanced t@(Tree _ n l r) = rk r < n && n <= rk r + 2
 -- heightass t@Nil = True
 -- heightass t@(Tree _ _ l r) = rk t <= 2 * (ht t) && ht t <= rk t && heightass l && heightass r  
 
--- {-@ inline EmpEqRk0 @-}
--- EmpEqRk0 :: Tree a -> Bool
--- EmpEqRk0 t = 
-
-
-{-@ emp :: {v:Wavl | ht v == (-1) && rk v == (-1) } @-}
-emp = Nil
-
-{-@ singleton :: a -> {v:NEWavl | ht v == 0 && rk v == 0 }@-}
-singleton a = Tree a 0 Nil Nil
+{-@ singleton :: a -> {v:NEWavl | ht v == 0 && rd v == 0 && rk v == rd v}@-}
+singleton a = Tree a 0 nil nil
 
 -- insertion
 {-@ insert :: (Ord a) => a -> s:Wavl -> {t:NEWavl | ((RkDiff t s 1) || (RkDiff t s 0)) } @-}
 insert :: (Ord a) => a -> Tree a -> Tree a
-insert x Nil = singleton x
+insert x (Nil _) = singleton x
 insert x t@(Tree v n l r) = case compare x v of
     LT -> insL
     GT -> insR
@@ -100,22 +93,22 @@ promoteR (Tree a n l r) = (Tree a (n+1) l r)
 
 {-@ rotateRight :: {v:Node0_2 | notEmptyTree (left (left v)) && IsNode1_2 (left v) && EqEmp (right (left v)) (right v) } -> {t:NEWavl | EqRk v t } @-}
 rotateRight :: Tree a -> Tree a
-rotateRight (Tree x n (Tree y m a b) c@Nil) = Tree y m a (Tree x (n-1) b c)
+-- rotateRight (Tree x n (Tree y m a b) c@nil) = Tree y m a (Tree x (n-1) b c)
 rotateRight (Tree x n (Tree y m a b) c) = Tree y m a (Tree x (n-1) b c)
 
 {-@ rotateDoubleRight :: {v:Node0_2 | notEmptyTree (right (left v)) && IsNode2_1 (left v) && EqEmp (right v) (left (left v))} -> {t:NEWavl | EqRk v t } @-}
 rotateDoubleRight :: Tree a -> Tree a
-rotateDoubleRight (Tree z n (Tree x m a (Tree y o b c)) d@Nil) =  Tree y (o+1) (Tree x (m-1) a b) (Tree z (n-1) c d) 
+-- rotateDoubleRight (Tree z n (Tree x m a (Tree y o b c)) d@nil) =  Tree y (o+1) (Tree x (m-1) a b) (Tree z (n-1) c d) 
 rotateDoubleRight (Tree z n (Tree x m a (Tree y o b c)) d) =  Tree y (o+1) (Tree x (m-1) a b) (Tree z (n-1) c d) 
 
 {-@ rotateLeft :: {v:Node2_0 | notEmptyTree (right v) && notEmptyTree (right (right v)) && IsNode2_1 (right v) && EqEmp (left v) (left (right v))} -> {t:NEWavl | EqRk v t } @-}
 rotateLeft :: Tree a -> Tree a
-rotateLeft t@(Tree x n a@Nil (Tree y m b c)) = Tree y m (Tree x (n-1) a b) c
+-- rotateLeft t@(Tree x n a@nil (Tree y m b c)) = Tree y m (Tree x (n-1) a b) c
 rotateLeft t@(Tree x n a (Tree y m b c)) = Tree y m (Tree x (n-1) a b) c
 
 {-@ rotateDoubleLeft :: {v:Node2_0 | notEmptyTree (left (right v)) && IsNode1_2 (right v) && EqEmp (left v) (right (right v))} -> {t:NEWavl | EqRk v t } @-}
 rotateDoubleLeft :: Tree a -> Tree a
-rotateDoubleLeft (Tree x n a@Nil (Tree y m (Tree z o b_1 b_2) c)) = Tree z (o+1) (Tree x (n-1) a b_1) (Tree y (m-1) b_2 c) 
+-- rotateDoubleLeft (Tree x n a@nil (Tree y m (Tree z o b_1 b_2) c)) = Tree z (o+1) (Tree x (n-1) a b_1) (Tree y (m-1) b_2 c) 
 rotateDoubleLeft (Tree x n a (Tree y m (Tree z o b_1 b_2) c)) = Tree z (o+1) (Tree x (n-1) a b_1) (Tree y (m-1) b_2 c) 
 
 -- Liquid Haskell
@@ -128,8 +121,6 @@ rotateDoubleLeft (Tree x n a (Tree y m (Tree z o b_1 b_2) c)) = Tree z (o+1) (Tr
 
 {-@ predicate EqRkN N T = rk T == N @-}
 {-@ predicate RkDiffN N T D = N - (rk T) == D @-}
-
-
 
 -- Could be even more be specified by cutting down 
 -- {-@ type AlmostWavlD = {t:AlmostWavl | (not (notEmptyTree t)) || (Is3Child t (left t) && Is3Child t (right t))} @-}
@@ -267,13 +258,13 @@ doubleDemoteL (Tree x n l (Tree y m rl rr)) = (Tree x (n-1) l (Tree x (m-1) rl r
 
 {-@ rotateLeftD :: {s:Node3_1 | Child1 (rk (right s)) (right (right s)) } -> {t:NEWavl | EqRk s t } @-}
 rotateLeftD :: Tree a -> Tree a
-rotateLeftD t@(Tree z n Nil (Tree y m Nil w)) = Tree y (m+1) (singleton z) w 
+rotateLeftD t@(Tree z n zl@(Nil (-1)) (Tree y m yl@(Nil (-1)) w)) = Tree y (m+1) (Tree z 0 nil nil) w 
 rotateLeftD t@(Tree z n x (Tree y m v w)) = Tree y (m+1) (Tree z (n-1) x v) w 
 
 {-@ rotateDoubleLeftD :: {s:Node3_1 | notEmptyTree (left (right s)) && IsNode1_2 (right s) && EqEmp (left s) (right (right s)) } 
                               -> {t:NEWavl | EqRk s t} @-}
 rotateDoubleLeftD :: Tree a -> Tree a
-rotateDoubleLeftD (Tree z n x (Tree y m (Tree v o vl vr) yr@Nil)) = Tree v n (Tree z (n-2) x vl) (Tree y (n-2) vr yr)
+-- rotateDoubleLeftD (Tree z n x (Tree y m (Tree v o vl vr) yr@nil)) = Tree v n (Tree z (n-2) x vl) (Tree y (n-2) vr yr)
 rotateDoubleLeftD (Tree z n x (Tree y m (Tree v o vl vr) yr))     = Tree v n (Tree z (n-2) x vl) (Tree y (n-2) vr yr)
 
 {-@ demoteR :: s:Node2_3 -> {t:NEWavl | RkDiff s t 1 } @-}
@@ -286,12 +277,12 @@ doubleDemoteR (Tree x n (Tree y m ll lr) r) = Tree x (n-1) (Tree y (m-1) ll lr) 
 
 {-@ rotateRightD :: {s:Node1_3 | rk(left (left s)) +1 = rk (left s) } -> {t:NEWavl | EqRk s t } @-}
 rotateRightD :: Tree a -> Tree a
-rotateRightD (Tree x n (Tree y m ll Nil) Nil) = Tree y (m+1) ll (Tree x (n-2) Nil Nil) 
+rotateRightD (Tree x n (Tree y m ll (Nil (-1))) (Nil _)) = Tree y (m+1) ll (Tree x (n-2) nil nil) 
 rotateRightD (Tree x n (Tree y m ll lr) r) = Tree y (m+1) ll (Tree x (n-1) lr r) 
 
 {-@ rotateDoubleRightD :: {s:Node1_3 | notEmptyTree (right (left s)) && IsNode2_1 (left s) && EqEmp (right s) (left (left s))} -> {t:NEWavl | EqRk s t } @-}
 rotateDoubleRightD :: Tree a -> Tree a
-rotateDoubleRightD (Tree x n (Tree y m ll (Tree z o lrl lrr)) r@Nil) = Tree z (o+2) (Tree y (m-1) ll lrl) (Tree x (n-2) lrr r)
+rotateDoubleRightD (Tree x n (Tree y m ll (Tree z o lrl lrr)) r@(Nil _)) = Tree z (o+2) (Tree y (m-1) ll lrl) (Tree x (n-2) lrr r)
 rotateDoubleRightD (Tree x n (Tree y m ll (Tree z o lrl lrr)) r)     = Tree z (o+2) (Tree y (m-1) ll lrl) (Tree x (n-2) lrr r)
 
 -- Test
