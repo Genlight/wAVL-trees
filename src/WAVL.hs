@@ -1,7 +1,4 @@
 {-@ LIQUID "--short-names" @-}
--- {-@ LIQUID "--exact-data-cons" @-}
--- {-@ LIQUID "--prune-unsorted" @-}
-{-@ LIQUID "--counter-examples" @-}
 
 module WAVL (Tree, singleton,
  insert,
@@ -60,7 +57,7 @@ balanced t@(Tree _ n l r) = rk r < n && n <= rk r + 2
 -- heightass t@(Tree _ _ l r) = rk t <= 2 * (ht t) && ht t <= rk t && heightass l && heightass r  
 
 {-@ singleton :: a -> {v:NEWavl | ht v == 0 && rd v == 0 && rk v == rd v}@-}
-singleton a = Tree a 0 (Nil (-1)) (Nil (-1))
+singleton a = Tree a 0 nil nil
 
 -- insertion
 {-@ insert :: (Ord a) => a -> s:Wavl -> {t:NEWavl | ((RkDiff t s 1) || (RkDiff t s 0)) } @-}
