@@ -254,7 +254,7 @@ doubleDemoteL (Tree x n l (Tree y m rl rr)) = (Tree x (n-1) l (Tree x (m-1) rl r
 
 {-@ rotateLeftD :: {s:Node3_1 | Child1 (rk (right s)) (right (right s)) } -> {t:NEWavl | EqRk s t } @-}
 rotateLeftD :: Tree a -> Tree a
-rotateLeftD t@(Tree z n zl@(Nil (-1)) (Tree y m yl@(Nil (-1)) w)) = Tree y (m+1) (Tree z 0 nil nil) w 
+rotateLeftD t@(Tree z n zl@(Nil (-1)) (Tree y m yl@(Nil (-1)) w)) = Tree y (m+1) (singleton z) w 
 rotateLeftD t@(Tree z n x (Tree y m v w)) = Tree y (m+1) (Tree z (n-1) x v) w 
 
 {-@ rotateDoubleLeftD :: {s:Node3_1 | notEmptyTree (left (right s)) && IsNode1_2 (right s) && EqEmp (left s) (right (right s)) } 
@@ -277,7 +277,6 @@ rotateRightD (Tree x n (Tree y m ll lr) r) = Tree y (m+1) ll (Tree x (n-1) lr r)
 
 {-@ rotateDoubleRightD :: {s:Node1_3 | notEmptyTree (right (left s)) && IsNode2_1 (left s) && EqEmp (right s) (left (left s))} -> {t:NEWavl | EqRk s t } @-}
 rotateDoubleRightD :: Tree a -> Tree a
-rotateDoubleRightD (Tree x n (Tree y m ll (Tree z o lrl lrr)) r@(Nil _)) = Tree z (o+2) (Tree y (m-1) ll lrl) (Tree x (n-2) lrr r)
 rotateDoubleRightD (Tree x n (Tree y m ll (Tree z o lrl lrr)) r)     = Tree z (o+2) (Tree y (m-1) ll lrl) (Tree x (n-2) lrr r)
 
 -- Test
