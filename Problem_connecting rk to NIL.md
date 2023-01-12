@@ -34,4 +34,4 @@ While the first is not straight forward, it is actually the implication if x is 
 
 My realization from that: 
 
-what I thought already to be explicit and "connected" through logic wasn't.
+what I thought already to be explicit and "connected" through logic wasn't. similar to my findings is this one article from Ranjit to Assumptions and Guarantees -> 
