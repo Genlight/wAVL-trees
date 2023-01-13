@@ -11,7 +11,7 @@ I found a way in a sense that i specified each possible case a Node could be in 
 
 From there I found one problem very challenging, namely that LH could not expand on my pattern matching. 
 
-My original idea of the delete function: 
+My original idea of the delete function (see file [Wavl.hs](https://github.com/Genlight/lhTest/blob/main/src/WAVL.hs), line 208): 
 
 ```haskell
 -- Deletion functions
