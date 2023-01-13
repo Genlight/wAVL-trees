@@ -1,13 +1,13 @@
 # otherwise Problem bei case matching Szenarien with LH
 
-I based my original code on the AVL code (see [./src/AVL.hs](https://github.com/Genlight/lhTest/blob/main/src/AVL.hs)). The AVL insert method used an otherwise expression which I copied. Originally, It seemed nice and comfortable, and I also used it in previous attempts at Haskell so I knew the basic functionality. 
+I based my original code on the AVL code (see [./src/AVL.hs](https://github.com/Genlight/lhTest/blob/main/src/AVL.hs). The AVL insert method used an otherwise expression which I copied. Originally, It seemed nice and comfortable, and I also used it in previous attempts at Haskell so I knew the basic functionality. 
 
 But with LH annotations the problem of pattern matching needs becomes apparent: In my algorithm, when I want to show that my BST only needs the following rebalancing operations and otherwise return then I could potentially use this method. But what I want to say is that
 
 what is more intuitive with vanilla haskell became quit unnerving with LH.
 
 For the function balLDel my i had to specify all possible patterns and could not default to the otherwise case as i did in the insert method. 
-I found a way in a sense that i specified each possible case a Node could be in and used that collection of possible cases in the annotation, s.t. to not pollute the code any further (see my type annotation "MaybeWavlNode" in [Wavl](https://github.com/Genlight/lhTest/blob/main)/src/WAVL.hs). 
+I found a way in a sense that i specified each possible case a Node could be in and used that collection of possible cases in the annotation, s.t. to not pollute the code any further (see my type annotation "MaybeWavlNode" in [./src/Wavl.hs](https://github.com/Genlight/lhTest/blob/main/src/WAVL.hs). 
 
 From there I found one problem very challenging, namely that LH could not expand on my pattern matching. 
 
