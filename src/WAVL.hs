@@ -49,7 +49,7 @@ balanced (Nil _) = True
 balanced t@(Tree _ n l r) = rk r < n && n <= rk r + 2 
                          && rk l < n && n <= rk l + 2
                          && ((notEmptyTree l) || (notEmptyTree r) || (n == 0)) -- disallow 2,2-leafs
-                        --  && isWavlNode t -- last point 
+                        --  && isWavlNode t
                          && (balanced l)
                          && (balanced r)
 
@@ -74,7 +74,7 @@ isWavlNode t@(Tree x n l r) =  ((rk l) + 2 == n && (rk r) + 2 == n && notEmptyTr
 -- heightass t@Nil = True
 -- heightass t@(Tree _ _ l r) = rk t <= 2 * (ht t) && ht t <= rk t && heightass l && heightass r  
 
-{-@ singleton :: a -> {v:NEWavl | ht v == 0 && rd v == 0 && rk v == rd v && isWavlNode v} @-}
+{-@ singleton :: a -> {v:NEWavl | ht v == 0 && rd v == 0 && rk v == rd v } @-} -- && isWavlNode v
 singleton a = Tree a 0 nil nil
 
 -- insertion
@@ -194,7 +194,7 @@ idWavl :: Tree a -> Tree a
 idWavl t = t
 
 -- Deletion functions
-{-@ delete :: (Ord a) => a -> s:Wavl -> {t:Wavl | (EqRk s t) || (RkDiff s t 1)} @-}
+{-@ delete :: (Ord a) => a -> s:MaybeWavlNode -> {t:MaybeWavlNode | (EqRk s t) || (RkDiff s t 1)} @-}
 delete _ (Nil _) = nil
 delete y (Tree x n l r)
   | y < x     = balLDel x n l' r
@@ -204,7 +204,7 @@ delete y (Tree x n l r)
       l' = delete x l
       r' = delete x r
 
-{-@ merge :: x:a -> l:Wavl -> r:Wavl -> {v:Rank | WavlRankN v l r }  -> {t:Wavl | EqRkN v t || RkDiffN v t 1 } @-}
+{-@ merge :: x:a -> l:Wavl -> r:Wavl -> {v:Rank | WavlRankN v l r && v >= 0 }  -> {t:MaybeWavlNode | EqRkN v t || RkDiffN v t 1 } @-}
 merge :: a -> Tree a -> Tree a -> Int ->  Tree a
 merge _ (Nil _) (Nil _) _ = nil
 merge _ (Nil _) r _  = r
