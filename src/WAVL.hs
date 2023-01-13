@@ -48,17 +48,17 @@ balanced Nil = True
 balanced t@(Tree _ n l r) = rk r < n && n <= rk r + 2 
                          && rk l < n && n <= rk l + 2
                          && ((notEmptyTree l) || (notEmptyTree r) || (n == 0)) -- disallow 2,2-leafs
-                        --  && isWavlNode t
                          && (balanced l)
                          && (balanced r)
 
--- alternative balance definition
--- {-@ measure balanced' @-}
--- balanced' :: Tree a -> Bool
--- balanced' Nil = True
--- balanced' t@(Tree _ n l r) = isWavlNode t
---   && (balanced' l)
---   && (balanced' r)
+-- alternative balance definition, using an enumeration of all allowed Node states 
+-- instead of ranges for ranks
+{-@ measure balanced' @-}
+balanced' :: Tree a -> Bool
+balanced' Nil = True
+balanced' t@(Tree _ n l r) = isWavlNode t
+  && (balanced' l)
+  && (balanced' r)
 
 {-@ measure isWavlNode @-}  
 isWavlNode :: Tree a -> Bool
