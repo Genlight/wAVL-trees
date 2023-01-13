@@ -194,9 +194,30 @@ idWavl :: Tree a -> Tree a
 idWavl t = t
 
 -- Deletion functions
-{-@ delete :: (Ord a) => a -> s:MaybeWavlNode -> {t:MaybeWavlNode | (EqRk s t) || (RkDiff s t 1)} @-}
+{-@ delete :: (Ord a) => a -> s:Wavl -> {t:Wavl | (EqRk s t) || (RkDiff s t 1)} @-}
 delete _ (Nil _) = nil
-delete y (Tree x n l r)
+delete y (Tree x n l@(Nil _) r@(Nil _))
+  | y < x     = balLDel x n l' r
+  | x < y     = balRDel x n l r'
+  | otherwise = merge y l r n 
+    where
+      l' = delete x l
+      r' = delete x r
+delete y (Tree x n l@(Nil _) r@(Tree _ _ _ _))
+  | y < x     = balLDel x n l' r
+  | x < y     = balRDel x n l r'
+  | otherwise = merge y l r n 
+    where
+      l' = delete x l
+      r' = delete x r
+delete y (Tree x n l@(Tree _ _ _ _) r@(Nil _))
+  | y < x     = balLDel x n l' r
+  | x < y     = balRDel x n l r'
+  | otherwise = merge y l r n 
+    where
+      l' = delete x l
+      r' = delete x r
+delete y (Tree x n l@(Tree _ _ _ _) r@(Tree _ _ _ _))
   | y < x     = balLDel x n l' r
   | x < y     = balRDel x n l r'
   | otherwise = merge y l r n 
