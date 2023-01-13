@@ -1,5 +1,6 @@
 {-@ LIQUID "--short-names" @-}
 {-@ LIQUID "--linear" @-}
+{-@ LIQUID "--ple" @-}
 
 module WAVL (Tree, singleton,
  insert, delete
@@ -194,6 +195,17 @@ idWavl :: Tree a -> Tree a
 idWavl t = t
 
 -- Deletion functions
+-- {-@ delete :: (Ord a) => a -> s:Wavl -> {t:Wavl | (EqRk s t) || (RkDiff s t 1)} @-}
+-- delete _ (Nil _) = nil
+-- delete y (Tree x n l r)
+--   | y < x     = balLDel x n l' r
+--   | x < y     = balRDel x n l r'
+--   | otherwise = merge y l r n 
+--     where
+--       l' = delete x l
+--       r' = delete x r
+      
+-- Deletion functions
 {-@ delete :: (Ord a) => a -> s:Wavl -> {t:Wavl | (EqRk s t) || (RkDiff s t 1)} @-}
 delete _ (Nil _) = nil
 delete y (Tree x n l@(Nil _) r@(Nil _))
@@ -225,7 +237,7 @@ delete y (Tree x n l@(Tree _ _ _ _) r@(Tree _ _ _ _))
       l' = delete x l
       r' = delete x r
 
-{-@ merge :: x:a -> l:Wavl -> r:Wavl -> {v:Rank | WavlRankN v l r && v >= 0 }  -> {t:MaybeWavlNode | EqRkN v t || RkDiffN v t 1 } @-}
+{-@ merge :: x:a -> l:Wavl -> r:Wavl -> {v:Rank | WavlRankN v l r && v >= 0 }  -> {t:Wavl | EqRkN v t || RkDiffN v t 1 } @-}
 merge :: a -> Tree a -> Tree a -> Int ->  Tree a
 merge _ (Nil _) (Nil _) _ = nil
 merge _ (Nil _) r _  = r
@@ -235,10 +247,10 @@ merge x l r n    = (balRDel y n l r')
    (r', y)     = getMin r
 
 -- get the inorder successor node 
-{-@  getMin :: v:NEWavl -> ({t:MaybeWavlNode | (EqRk v t) || (RkDiff v t 1) }, a) @-} 
+{-@  getMin :: v:NEWavl -> ({t:Wavl | (EqRk v t) || (RkDiff v t 1) }, a) @-} 
 getMin :: Tree a -> (Tree a, a)
 getMin (Tree x 0 (Nil _) (Nil _)) = (nil, x)
-getMin (Tree x 1 (Nil _) r@(Tree _ 0 _ _)) = (r, x)
+getMin (Tree x 1 (Nil _) r@(Tree _ _ _ _)) = (r, x)
 getMin (Tree x n l@(Tree _ _ _ _) r@(Nil _)) = ((balLDel x n l' r), x')
   where
     (l', x')             = getMin l
