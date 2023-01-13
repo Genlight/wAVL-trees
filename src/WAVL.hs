@@ -219,6 +219,8 @@ getMin :: Tree a -> (Tree a, a)
 getMin (Tree x 0 (Nil _) (Nil _)) = (nil, x)
 getMin (Tree x 1 (Nil _) r@(Tree _ 0 _ _)) = (r, x)
 getMin (Tree x n l@(Tree _ _ _ _) r@(Nil _)) = ((balLDel x n l' r), x')
+  where
+    (l', x')             = getMin l
 getMin (Tree x n l@(Tree _ _ _ _) r) = ((balLDel x n l' r), x')
   where
     (l', x')             = getMin l
