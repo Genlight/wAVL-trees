@@ -1,6 +1,5 @@
 {-@ LIQUID "--short-names" @-}
 {-@ LIQUID "--linear" @-}
-{-@ LIQUID "--ple" @-}
 
 module WAVL (Tree, singleton,
  insert, delete
