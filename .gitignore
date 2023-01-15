@@ -56,3 +56,4 @@ cabal.project.local~
 src/.liquid
 # End of https://www.toptal.com/developers/gitignore/api/localstack,haskell,visualstudiocode
 ghcid.txt!
+src/PopPush.hs
