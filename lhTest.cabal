@@ -23,6 +23,7 @@ library
     --   WAVL_With_Rankdiff,     
     --   AVL,
       WAVL
+    -- PopPush
   hs-source-dirs:
       src
   build-depends:
