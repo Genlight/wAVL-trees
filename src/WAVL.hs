@@ -309,7 +309,7 @@ rotateDoubleRightD (Tree x n (Tree y m ll (Tree z o lrl lrr)) r) = Tree z (o+2) 
 
 {-| Lemma's
   what we want to proof:
-  - Height of a given Tree t  is in the bound of the heightLemma
+  - Height of a given Tree t is an logarithmic upper bound
 |-}
 
 {-@ reflect heightLemma @-}
@@ -329,26 +329,10 @@ wavlNodeStructLemma t@(Tree _ n l r)  = rk r + 2   ? balanced t
                                     =>= rk r + 1
                                     *** QED
 
--- {-@ node0Lemma :: {t:Wavl | rk t == 0} -> {rk (right t) == rk (left t) && rk (left t) == (-1) && ht (left t) == rk (left t)} @-}
--- node0Lemma :: Tree a -> ()
--- node0Lemma t@(Tree _ n@0 l r) = n + 1 =>= rk r
---                                       === (-1) 
---                                       === rk l 
---                                       =<= ht l
---                                       *** QED
-
--- {-@ nilLemma1 :: { t:Wavl | rk t == (-1)} -> {not (notEmptyTree t)} @-}
--- nilLemma1 :: Tree a -> Proof
--- nilLemma1 t = () *** QED
-
 {-@ nilLemma2 :: { t:Wavl | rk t == (-1)} -> {ht t == rk t } @-}
 nilLemma2 :: Tree a -> Proof 
 nilLemma2 t@Nil = rk t === (-1) === ht t 
               *** QED 
-
--- {-@ node1Lemma :: {t:Wavl | rk t == 1 } -> {notEmptyTree (right t) || notEmptyTree (left t)} @-}
--- node1Lemma :: Tree a -> ()
--- node1Lemma t@(Tree _ n l r) = trivial *** QED
 
 {-@ hL0 :: {t:NEWavl | ht (left t) == ht (right t)} -> { ht (left t) + 1 == ht t  } @-}
 hL0 :: Tree a -> Proof
@@ -391,11 +375,62 @@ lowerHeightProof t@(Tree _ n l r)
                 === ht t 
                 *** QED
 
--- {-@ heightProof :: t:Wavl -> {lowerHeight} @-}
--- heightProof :: Tree a -> ()
--- heightProof t@Nil = rk t === (-1) === ht t ==. heightLemma t *** QED
--- heightProof t@(Tree _ 0 _ _) = trivial *** QED 
-
+{-@ upperHeightProof :: t:Wavl -> { (not (notEmptyTree t)) || (rk t <= ht t * 2) } / [rk t] @-}
+upperHeightProof :: Tree a -> Proof
+upperHeightProof t@Nil  = () ? notEmptyTree t *** QED       
+upperHeightProof t@(Tree _ 0 l r) = rk r 
+                                === (-1)  ? nilLemma2 r        
+                                === ht r  
+                                === rk l  ? nilLemma2 l         
+                                === ht l
+                                =<= ht t  ? hL0 t        
+                                === 0
+                                === rk t
+                                === ht t * 2 
+                                *** QED
+upperHeightProof t@(Tree _ 1 l r)
+  | rk l == rk r  = rk t     ? balanced t
+                =<= rk r + 1
+                === rk l + 1 
+                =>= rk l      ? balanced t
+                === 0         ? upperHeightProof l 
+                === rk l      ? lowerHeightProof l 
+                === ht l      
+                =<= ht l + 1
+                =<= ht t
+                =<= ht t * 2 
+                *** QED
+  | rk l > rk r  = rk t           ? balanced t
+               =<= rk l + 2       ? upperHeightProof l
+               =<= 2 * ht l + 2  
+               =<= 2 * (ht l + 1)   
+               =<= 2 * ht t   
+               *** QED
+  | rk l < rk r  = rk t           ? balanced t
+               =<= rk r + 2       ? upperHeightProof r
+               =<= 2 * ht r + 2  
+               =<= 2 * (ht r + 1)   
+               =<= 2 * ht t   
+               *** QED
+upperHeightProof t@(Tree _ n l r) 
+  | ht l == ht r  = rk t           ? balanced t
+                =<= rk l + 2       ? upperHeightProof l
+                =<= 2 * ht l + 2   
+                === 2 * (ht l + 1) ? hL0 t
+                =<= 2 * ht t
+                *** QED
+  | ht l > ht r   = rk t           ? balanced t
+                =<= rk l + 2       ? upperHeightProof l
+                =<= 2 * ht l + 2  
+                === 2 * (ht l + 1) ? hL1 t
+                =<= 2 * ht t
+                *** QED
+  | ht r > ht l   = rk t            ? balanced t
+                =<= rk r + 2        ? upperHeightProof r
+                =<= 2 * (ht r) + 2  
+                === 2 * (ht r + 1) ? hL2 t      
+                =<= 2 * ht t
+                *** QED
 
 -- Test
 main = do
