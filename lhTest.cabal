@@ -22,7 +22,8 @@ library
   exposed-modules:
     --   WAVL_With_Rankdiff,     
     --   AVL,
-      WAVL
+      WAVL,
+      PotentialAnalysis_WAVL
     -- PopPush
   hs-source-dirs:
       src

@@ -3,8 +3,16 @@
 {-@ LIQUID "--ple" @-}
 {-@ LIQUID "--ple-with-undecided-guards" @-}
 
-module WAVL (Tree, singleton,
- insert, delete
+module WAVL (Tree (..), singleton,
+ insert, delete, rk, 
+ promoteL, promoteR, 
+ demoteL, demoteR, doubleDemoteL, doubleDemoteR, 
+ rotateRight, rotateLeft,
+ rotateDoubleLeft, 
+ rotateDoubleRight,
+ rotateLeftD, rotateRightD,  
+ rotateDoubleLeftD, 
+ rotateDoubleRightD, 
  ) where
 
 import Language.Haskell.Liquid.ProofCombinators
@@ -42,10 +50,6 @@ notEmptyTree _ = True
 ht              :: Tree a -> Int
 ht Nil          = (-1)
 ht (Tree x n l r) = if (ht l) > (ht r) then (1 + ht l) else (1 + ht r)
-
-{-@ htDiff :: s:Tree a -> t: Tree a -> {v: Int | HtDiff s t v} @-}
-htDiff :: Tree a -> Tree a -> Int
-htDiff l r = ht l - ht r
 
 {-@ measure balanced @-}
 balanced :: Tree a -> Bool
@@ -124,11 +128,6 @@ rotateLeft t@(Tree x n a (Tree y m b c)) = Tree y m (Tree x (n-1) a b) c
 rotateDoubleLeft :: Tree a -> Tree a
 rotateDoubleLeft (Tree x n a (Tree y m (Tree z o b_1 b_2) c)) = Tree z (o+1) (Tree x (n-1) a b_1) (Tree y (m-1) b_2 c) 
 
--- Liquid Haskell
-{-@ predicate HtDiff S T D = (ht S) - (ht T) == D @-}
-{-@ predicate EqHt S T = (ht S) == (ht T) @-}
-
--- predicates by me
 {-@ predicate EqRk S T = rk T == rk S @-}
 {-@ predicate RkDiff S T D = (rk S) - (rk T) == D @-}
 
@@ -307,14 +306,15 @@ rotateRightD (Tree x n (Tree y m ll lr) r) = Tree y (m+1) ll (Tree x (n-1) lr r)
 rotateDoubleRightD :: Tree a -> Tree a
 rotateDoubleRightD (Tree x n (Tree y m ll (Tree z o lrl lrr)) r) = Tree z (o+2) (Tree y (m-1) ll lrl) (Tree x (n-2) lrr r)
 
-{-| Lemma's
+{-| Theorem 
   what we want to proof:
-  - Height of a given Tree t is an logarithmic upper bound
+  - Height of a given Tree t is a logarithmic upper bound
 |-}
 
 {-@ reflect heightLemma @-}
 {-@ heightLemma :: t:Wavl  -> Bool  / [rk t] @-}
 heightLemma :: Tree a -> Bool
+heightLemma Nil = True
 heightLemma t = rk t <= 2 * (ht t) && ht t <= rk t  
 
 {-@ wavlNodeStructLemma :: t:Wavl -> { isWavlNode t} @-}
@@ -389,7 +389,7 @@ upperHeightProof t@(Tree _ 0 l r) = rk r
                                 === ht t * 2 
                                 *** QED
 upperHeightProof t@(Tree _ 1 l r)
-  | rk l == rk r  = rk t     ? balanced t
+  | rk l == rk r  = rk t      ? balanced t
                 =<= rk r + 1
                 === rk l + 1 
                 =>= rk l      ? balanced t
@@ -431,6 +431,37 @@ upperHeightProof t@(Tree _ n l r)
                 === 2 * (ht r + 1) ? hL2 t      
                 =<= 2 * ht t
                 *** QED
+
+{-@ heightProof :: t:Wavl -> {heightLemma t} @-}
+heightProof :: Tree a -> Proof
+heightProof t@Nil = ht t ? lowerHeightProof t  
+              =<= rk t ? notEmptyTree t 
+              *** QED
+heightProof t = ht t ? lowerHeightProof t 
+            =<= rk t ? upperHeightProof t
+            =<= 2 * ht t  
+            *** QED
+
+{-|
+  Theorem 4.2: 
+  In a wavl tree with bottom-up rebalancing, there are at most 3m + 2d <= 5m promote ssteps over all insertions, where m and d are the number of insertions and deletions, respectively. 
+
+  potential of a tree
+   - non-leaf 1,1-node, or 0,1-Node has potential 1
+   - all other nodes have 0 potential
+|-}
+
+-- {-@ measure potT @-}
+{-@ potT :: t:Wavl ->  {v: Int | v >= 0} / [rk t] @-}
+potT :: Tree a -> Int
+potT Nil      = 0
+potT t@(Tree _ 0 Nil Nil) = 0 
+potT t@(Tree _ n l r) 
+  | rk l == rk r && rk l + 1 == n = go 1    -- 1,1-Node
+  | rk l == n && rk r + 1 == n    = go 1    -- 0,1-Node
+  | rk r == n && rk l + 1 == n    = go 1    -- 1,0-Node
+  | otherwise = go 0 
+    where go n = n + potT l + potT r
 
 -- Test
 main = do
