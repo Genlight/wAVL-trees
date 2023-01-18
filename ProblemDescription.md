@@ -1,7 +1,6 @@
 
 # Problem Description to WAVL trees and the BAlDel method 
 
-
 In my tries to find suitable refinements I often looked at the test files for LiquidHaskell, espec. at [AVL.hs](https://github.com/ucsd-progsys/liquidhaskell/blob/develop/tests/pos/AVL.hs). 
 
 that is also the reason why some of the function names sound very similar and the insert function looks very similar to your code. 
