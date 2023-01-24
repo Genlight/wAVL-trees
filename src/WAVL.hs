@@ -25,7 +25,7 @@ import Language.Haskell.Liquid.RTick as RTick
 data Tree a = Nil | Tree { val :: a, rd :: Int, left :: (Tree a), right :: (Tree a)} deriving Show
 
 {-@ type Wavl = {v: Tree a | balanced v } @-}
-{-@ type NEWavl = {v:Wavl | notEmptyTree v && rk v >= 0 } @-}
+{-@ type NEWavl = {v:Wavl | notEmptyTree v } @-}
 {-@ type AlmostWavl = {t:Tree a | (not (notEmptyTree t)) || (balanced (left t) && balanced (right t)) } @-}
 {-@ type Rank = {v:Int | v >= -1} @-}
 
@@ -136,8 +136,8 @@ rotateDoubleLeft (Tree x n a (Tree y m (Tree z o b_1 b_2) c)) = Tree z (o+1) (Tr
 {-@ type Node0_1 = { v:AlmostWavl | notEmptyTree v  && notEmptyTree (left v) && (RkDiff v (left v) 0 ) && (RkDiff v (right v) 1) && rk v >= 0 } @-}
 {-@ type Node1_0 = { v:AlmostWavl | notEmptyTree v && notEmptyTree (right v) && (RkDiff v (left v) 1 ) && (RkDiff v (right v) 0) && rk v >= 0 } @-}
 
-{-@ type Node2_1 = { v:NEWavl | notEmptyTree (right v) && (RkDiff v (left v) 2 ) && (RkDiff v (right v) 1) && rk v >= 0 } @-}
-{-@ type Node1_2 = { v:NEWavl | notEmptyTree (left v) && IsNode1_2 v && rk v >= 0 } @-}
+{-@ type Node2_1 = { v:NEWavl | IsNode2_1 v } @-}
+{-@ type Node1_2 = { v:NEWavl | IsNode1_2 v } @-}
 
 {-@ type Node0_2 = { v:AlmostWavl | notEmptyTree v && notEmptyTree (left v) && EqRk v (left v) && RkDiff v (right v) 2  && rk v >= 1 } @-}
 {-@ type Node2_0 = { v:AlmostWavl | notEmptyTree v && notEmptyTree (right v) && EqRk v (right v) && RkDiff v (left v) 2 && rk v >= 1 } @-}
@@ -283,7 +283,7 @@ rotateLeftD :: Tree a -> Tree a
 rotateLeftD t@(Tree z n zl@Nil (Tree y m yl@Nil w)) = Tree y (m+1) (singleton z) w 
 rotateLeftD t@(Tree z n x (Tree y m v w)) = Tree y (m+1) (Tree z (n-1) x v) w 
 
-{-@ rotateDoubleLeftD :: {s:Node3_1 | notEmptyTree (left (right s)) && IsNode1_2 (right s) } 
+{-@ rotateDoubleLeftD :: {s:Node3_1 | IsNode1_2 (right s) } 
                               -> {t:NEWavl | EqRk s t} @-}
 rotateDoubleLeftD :: Tree a -> Tree a
 rotateDoubleLeftD (Tree z n x (Tree y m (Tree v o vl vr) yr)) = Tree v n (Tree z (n-2) x vl) (Tree y (n-2) vr yr)
@@ -301,7 +301,7 @@ rotateRightD :: Tree a -> Tree a
 rotateRightD (Tree x n (Tree y m ll Nil) Nil) = Tree y (m+1) ll (singleton x) -- using another demote here
 rotateRightD (Tree x n (Tree y m ll lr) r) = Tree y (m+1) ll (Tree x (n-1) lr r) 
 
-{-@ rotateDoubleRightD :: {s:Node1_3 | notEmptyTree (right (left s)) && IsNode2_1 (left s) } -> {t:NEWavl | EqRk s t } @-}
+{-@ rotateDoubleRightD :: {s:Node1_3 | IsNode2_1 (left s) } -> {t:NEWavl | EqRk s t } @-}
 rotateDoubleRightD :: Tree a -> Tree a
 rotateDoubleRightD (Tree x n (Tree y m ll (Tree z o lrl lrr)) r) = Tree z (o+2) (Tree y (m-1) ll lrl) (Tree x (n-2) lrr r)
 
