@@ -1,7 +1,6 @@
 {-@ LIQUID "--short-names" @-}
 {-@ LIQUID "--reflection" @-}
 {-@ LIQUID "--ple" @-}
-{-@ LIQUID "--ple-with-undecided-guards" @-}
 
 module WAVL (Tree (..), singleton,
  insert, delete, rk, 

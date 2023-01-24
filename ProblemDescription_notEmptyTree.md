@@ -28,3 +28,21 @@ Is there some other way to propagate the predicates inside a function?
 After an email correspondence with [Ranjit Jhala](https://github.com/ranjitjhala), one of the core developers of LiquidHaskell, I added a crude solution with the last WIP [commit](https://github.com/Genlight/lhTest/commit/373be42d37f3508039555e65c66e3938470d80b1).
 
 Solution was to add another function, add a precondition in balDelL for `notEmptyTree r` and put that into the function refinement for that sub function. While the function refinement for the sub stayed the same as for `balDelL` I added a notEmptyTree r to it which LH accepted.  
+
+# nicer solution
+
+after struggling with another part of the code I found that a case splitting refinement (of sorts) for the `rk` function did the trick:
+
+```haskell
+{-@ measure rk @-}
+{-@ rk :: t:Tree a -> {v:Rank | (not (notEmptyTree t) || v >= 0) && (notEmptyTree t || v== (-1))} @-}
+rk :: Tree a -> Int
+rk Nil =  -1
+rk t@(Tree _ n _ _) = n
+```
+
+I actually just used the DNF form of the implication that a Nil node has rk == -1 and all others are above that. That resulted in LH accepting `rk` even as a termination metric which whitout this refinement didn't do. 
+
+Further, by using this type of case distinction in the refinement I also could remove all the notemptyTree predicates in the actual Haskell code bc now LH was able to differentiate between the notEmpty Cases better by infering the actual rk. 
+
+So with this one refinement on rk i was able to completely lift notEmptyTree from the actual code and only need the function in my refinement predicates. 
