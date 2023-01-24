@@ -442,27 +442,6 @@ heightProof t = ht t ? lowerHeightProof t
             =<= 2 * ht t  
             *** QED
 
-{-|
-  Theorem 4.2: 
-  In a wavl tree with bottom-up rebalancing, there are at most 3m + 2d <= 5m promote ssteps over all insertions, where m and d are the number of insertions and deletions, respectively. 
-
-  potential of a tree
-   - non-leaf 1,1-node, or 0,1-Node has potential 1
-   - all other nodes have 0 potential
-|-}
-
--- {-@ measure potT @-}
-{-@ potT :: t:Wavl ->  {v: Int | v >= 0} / [rk t] @-}
-potT :: Tree a -> Int
-potT Nil      = 0
-potT t@(Tree _ 0 Nil Nil) = 0 
-potT t@(Tree _ n l r) 
-  | rk l == rk r && rk l + 1 == n = go 1    -- 1,1-Node
-  | rk l == n && rk r + 1 == n    = go 1    -- 0,1-Node
-  | rk r == n && rk l + 1 == n    = go 1    -- 1,0-Node
-  | otherwise = go 0 
-    where go n = n + potT l + potT r
-
 -- Test
 main = do
     mapM_ print [a,b,c,d,e,f,g]
