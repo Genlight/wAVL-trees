@@ -3,9 +3,9 @@
 {-@ LIQUID "--ple" @-}
 -- {-@ LIQUID "--ple-with-undecided-guards" @-}
 
-module PotentialAnalysis_WAVL ( ) where
+module PotentialAnalysis_WAVL  where
 
-import Prelude hiding (pure)
+import Prelude hiding (pure, (>>=), (<*>), ap)
 import WAVL
 import Language.Haskell.Liquid.ProofCombinators
 import Language.Haskell.Liquid.RTick as RTick
@@ -27,6 +27,7 @@ potT t@(WAVL.Tree _ n l r)
   | WAVL.rk r + 3 == n && WAVL.rk l + 2 == n    = 1 + potT l + potT r    -- 3,2-Node
   | otherwise = potT l + potT r
 
+{-@ type NodeRank = {v:Int | v >= 0} @-}
 {-|
     THEOREM 4.1. In a wavl tree with bottom-up rebalancing, there are at most d demote
     steps over all deletions, where d is the number of deletions.
@@ -35,104 +36,107 @@ potT t@(WAVL.Tree _ n l r)
     -> only at a 2,2- or 1,2-node can a 3-child be created and thus leading to a chain of demote steps
 |-}
 
+
 -- don't know if we need this here, probably redundant, bc we want to say that amortized costs of all demote steps are equal to deletions n
 -- WavlD a n, where n is the total count for all the deletions applied on the tree
 -- {-@ type WavlD n = {t:Wavl | n >= 0 } @-}
 
 -- Deletion functions
-{-@ delete' :: (Ord a) => a -> s:Wavl -> Tick ({t:Wavl | (EqRk s t) || (RkDiff s t 1) }) @-}
-delete' :: a -> Tree a -> Tick (Tree a)
-delete' _ WAVL.Nil = pure WAVL.Nil
-delete' y (WAVL.Tree x n l@WAVL.Nil r@WAVL.Nil)
-  | y < x     = balLDel' x n l' r
-  | x < y     = balRDel' x n l r'
-  | otherwise = merge' y l r n 
-    where
-      l' = delete' x l
-      r' = delete' x r
-delete' y (WAVL.Tree x n l@WAVL.Nil r@(WAVL.Tree _ _ _ _))
-  | y < x     = balLDel' x n l' r
-  | x < y     = balRDel' x n l r'
-  | otherwise = merge' y l r n 
-    where
-      l' = delete' x l
-      r' = delete' x r
-delete' y (WAVL.Tree x n l@(WAVL.Tree _ _ _ _) r@WAVL.Nil)
-  | y < x     = balLDel' x n l' r
-  | x < y     = balRDel' x n l r'
-  | otherwise = merge' y l r n 
-    where
-      l' = delete' x l
-      r' = delete' x r
-delete' y (WAVL.Tree x n l@(WAVL.Tree _ _ _ _) r@(WAVL.Tree _ _ _ _))
-  | y < x     = balLDel' x n l' r
-  | x < y     = balRDel' x n l r'
-  | otherwise = merge' y l r n 
-    where
-      l' = delete' x l
-      r' = delete' x r
+-- {-@ delete' :: _ -> s:Wavl -> Tick ({t:Wavl | (EqRk s t) || (RkDiff s t 1) }) @-}
+-- delete' :: (Ord a) => a -> Tree a -> Tick (Tree a)
+-- delete' _ WAVL.Nil = pure WAVL.Nil
+-- delete' y (WAVL.Tree x n l@WAVL.Nil r@WAVL.Nil)
+--   | y < x     = balLDel' x n l' r
+--   | x < y     = balRDel' x n l r'
+--   | otherwise = merge' y l r n 
+--     where
+--       l' = delete' x l
+--       r' = delete' x r
+-- delete' y (WAVL.Tree x n l@WAVL.Nil r@(WAVL.Tree _ _ _ _))
+--   | y < x     = balLDel' x n l' r
+--   | x < y     = balRDel' x n l r'
+--   | otherwise = merge' y l r n 
+--     where
+--       l' = delete' x l
+--       r' = delete' x r
+-- delete' y (WAVL.Tree x n l@(WAVL.Tree _ _ _ _) r@WAVL.Nil)
+--   | y < x     = balLDel' x n l' r
+--   | x < y     = balRDel' x n l r'
+--   | otherwise = merge' y l r n 
+--     where
+--       l' = delete' x l
+--       r' = delete' x r
+-- delete' y (WAVL.Tree x n l@(WAVL.Tree _ _ _ _) r@(WAVL.Tree _ _ _ _))
+--   | y < x     = balLDel' x n l' r
+--   | x < y     = balRDel' x n l r'
+--   | otherwise = merge' y l r n 
+--     where
+--       l' = delete' x l
+--       r' = delete' x r
 
-{-@ merge' :: x:a -> l:Wavl -> r:Wavl -> {v:Rank | WavlRankN v l r && v >= 0 }  -> Tick ({t:Wavl | EqRkN v t || RkDiffN v t 1 }) @-}
-merge' :: a -> Tree a -> Tree a -> Int -> Tick (Tree a)
-merge' _ Nil Nil _ = pure Nil
-merge' _ Nil r _  = pure r
-merge' _ l Nil _  = pure l
-merge' x l r n    = balRDel' y n l r'
-  where
-   (r', y)     = getMin' r
+-- {-@ merge' :: a -> l:Wavl -> r:Wavl -> {v:Rank | WavlRankN v l r && v >= 0 }  -> Tick ({t:Wavl | EqRkN v t || RkDiffN v t 1 }) @-}
+-- merge' :: a -> Tree a -> Tree a -> Int -> Tick (Tree a)
+-- merge' _ Nil Nil _ = pure Nil
+-- merge' _ Nil r _  = pure r
+-- merge' _ l Nil _  = pure l
+-- merge' x l r n    = balRDel' y n l r'
+--   where
+--    (r', y)     = getMin' r
 
--- get the inorder successor node 
-{-@  getMin' :: v:NEWavl -> (Tick ({t:Wavl | (EqRk v t) || (RkDiff v t 1) }), a) @-} 
-getMin' :: Tree a -> (Tick (Tree a), a)
-getMin' (WAVL.Tree x 0 WAVL.Nil WAVL.Nil) = (pure WAVL.Nil, x)
-getMin' (WAVL.Tree x 1 WAVL.Nil r@(Tree _ _ _ _)) = (pure r, x)
-getMin' (WAVL.Tree x n l@(Tree _ _ _ _) r@WAVL.Nil) = ((balLDel' x n l' r), x')
-  where
-    (l', x')             = getMin' l
-getMin' (WAVL.Tree x n l@(WAVL.Tree _ _ _ _) r) = ((balLDel' x n l' r), x')
-  where
-    (l', x')             = getMin' l
+-- -- get the inorder successor node 
+-- {-@  getMin' :: v:NEWavl -> (Tick ({t:Wavl | (EqRk v t) || (RkDiff v t 1) }), _) @-} 
+-- getMin' :: Tree a -> (Tick (Tree a), a)
+-- getMin' (WAVL.Tree x 0 WAVL.Nil WAVL.Nil) = (pure WAVL.Nil, x)
+-- getMin' (WAVL.Tree x 1 WAVL.Nil r@(Tree _ _ _ _)) = (pure r, x)
+-- getMin' (WAVL.Tree x n l@(Tree _ _ _ _) r@WAVL.Nil) = ((balLDel' x n l' r), x')
+--   where
+--     (l', x')             = getMin' l
+-- getMin' (WAVL.Tree x n l@(WAVL.Tree _ _ _ _) r) = ((balLDel' x n l' r), x')
+--   where
+--     (l', x')             = getMin' l
 
-{-@ balLDel' :: a -> n:Rank -> Tick ({l:Wavl | Is3ChildN n l}) -> {r:MaybeWavlNode | Is2ChildN n r} -> Tick ({t:NEWavl | (rk t == n || rk t + 1 == n) }) @-}
-balLDel' :: a -> Int -> Tick (Tree a) -> Tree a -> Tick (Tree a)
-balLDel' x 0 (Tick _ Nil) Nil  = pure (singleton x)
-balLDel' x 1 (Tick _ Nil) Nil  = pure (singleton x)
-balLDel' x n (Tick s l) r | n <= (rk l) + 2 = Tick s t
-                 | n == (rk l) + 3 && (rk r) + 2 == n = demoteL' t
-                 | n == (rk l) + 3 && (rk r) + 1 == n && rk (left r) + 2 == (rk r) && (rk (right r)) + 2 == rk r = doubleDemoteL' t
-                 | n == (rk l) + 3 && (rk r) + 1 == n && rk (right r) + 1 == rk r = rotateLeftD' t
-                 | n == (rk l) + 3 && (rk r) + 1 == n && rk (right r) + 2 == rk r && rk (left r) + 1 == rk r = rotateDoubleLeftD' t
-                   where
-                     t = tUnionL x n l r
+-- {-@ balLDel' :: _ -> {n:Rank | n >= 0} -> Tick ({l:Wavl | Is3ChildN n l}) -> {r:MaybeWavlNode | Is2ChildN n r} -> Tick ({t:NEWavl | (rk t == n || rk t + 1 == n) }) @-}
+-- balLDel' :: a -> Int -> Tick (Tree a) -> Tree a -> Tick (Tree a)
+-- balLDel' x 0 (Tick _ Nil) Nil  = pure (singleton x)
+-- balLDel' x 1 (Tick _ Nil) Nil  = pure (singleton x)
+-- balLDel' x n l r | n <= rk l' + 2 = t
+--                  | n == rk l' + 3 && rk r + 2 == n = t >>= demoteL'
+--                  | n == rk l' + 3 && rk r + 1 == n && rk (left r) + 2 == rk r && (rk (right r)) + 2 == rk r = t >>= doubleDemoteL'
+--                  | n == rk l' + 3 && rk r + 1 == n && rk (right r) + 1 == rk r = t >>= rotateLeftD'
+--                  | n == rk l' + 3 && rk r + 1 == n && rk (right r) + 2 == rk r && rk (left r) + 1 == rk r = t >>= rotateDoubleLeftD'
+--                    where
+--                      t  = tUnionL x n l r
+--                      l' = tval l 
 
-{-@ balRDel' :: _ -> n:Rank -> {l:MaybeWavlNode | Is2ChildN n l} -> Tick ({r:Wavl | Is3ChildN n r}) -> Tick ({t:NEWavl | rk t == n || rk t + 1 == n }) @-}
+{-@ balRDel' :: a -> n:Rank -> {l:MaybeWavlNode2 | Is2ChildN n l} -> Tick ({r:Wavl' | Is3ChildN n r}) -> Tick (t:Tree a) @-}
 balRDel' :: a -> Int -> Tree a -> Tick (Tree a) -> Tick (Tree a)
 balRDel' x 0 Nil (Tick _ Nil) = pure (singleton x)
 balRDel' x 1 Nil (Tick _ Nil) = pure (singleton x)
-balRDel' x n l r | n < (rk r + 3) = t
-                 | n == (rk r + 3) && (rk l) + 2 == n = demoteR' t
-                 | n == (rk r + 3) && (rk l) + 1 == n && (rk (left l)) + 2 == rk l && (rk (right l)) + 2 == rk l = doubleDemoteR' t
-                 | n == (rk r + 3) && (rk l) + 1 == n && (rk (left l)) + 1 == rk l = rotateRightD' t
-                 | n == (rk r + 3) && (rk l) + 1 == n && (rk (left l)) + 2 == rk l && (rk (right l)) + 1 == rk l = rotateDoubleRightD' t
+balRDel' x n l r | n < rk r' + 3 = t
+                 | n == rk r' + 3 && rk l + 2 == n = t >>= demoteR'
+                 | n == rk r' + 3 && rk l + 1 == n && rk (left l) + 2 == rk l && rk (right l) + 2 == rk l = t >>= doubleDemoteR'
+                 | n == rk r' + 3 && rk l + 1 == n && rk (left l) + 1 == rk l = t >>= rotateRightD'
+                 | n == rk r' + 3 && rk l + 1 == n && rk (left l) + 2 == rk l && rk (right l) + 1 == rk l = t >>= rotateDoubleRightD'
                   where 
-                    t = tUnionR x n l r
+                    t =  (pure Tree) `ap` (pure x) `ap` (pure n) `ap` (pure l) `ap` r
+                    r' = tval r
 
-tUnionL :: a -> Int -> Tick (Tree a) -> Tree a -> Tick (Tree a)
-tUnionL x n (Tick s l) r = Tick s (Tree x n l r) 
-
-tUnionR :: a -> Int -> Tree a -> Tick (Tree a) -> Tick (Tree a)
-tUnionR x n l (Tick s r) = Tick s (Tree x n l r) 
+{-@ type Wavl' = {v:Tree a | WAVL.balanced v } @-}
+{-@ type NEWavl' = {v:Wavl' | WAVL.notEmptyTree v } @-}
+{-@ type MaybeWavlNode2 = {v:Wavl' | (not (WAVL.notEmptyTree v) || IsWavlNode v) } @-}
+{-@ type AlmostWavl' = {t:Tree a | (not (WAVL.notEmptyTree t)) || (WAVL.balanced (WAVL.left t) && WAVL.balanced (WAVL.right t)) } @-}
+ 
 
 {-@ demoteL' :: s:Node3_2 -> Tick ({t:NEWavl | RkDiff s t 1 }) @-}
 demoteL' :: Tree a -> Tick (Tree a)
-demoteL' t = go (demoteL t)
+demoteL' t = go (WAVL.demoteL t)
 
 {-@ doubleDemoteL' :: {s:Node3_1 | IsNode2_2 (right s) } -> Tick ({t:NEWavl | RkDiff s t 1}) @-}
 doubleDemoteL' :: Tree a -> Tick (Tree a)
-doubleDemoteL' t = go (doubleDemoteL t)
+doubleDemoteL' t = RTick.go (doubleDemoteL t)
 
-{-@ rotateLeftD' :: Tick {s:Node3_1 | Child1 (rk (right s)) (right (right s)) } -> Tick ({t:NEWavl | EqRk s t }) @-}
-rotateLeftD' :: Tick (Tree a) -> Tick (Tree a)
+{-@ rotateLeftD' :: {s:Node3_1 | Child1 (rk (right s)) (right (right s)) } -> Tick ({t:NEWavl | EqRk s t }) @-}
+rotateLeftD' :: Tree a -> Tick (Tree a)
 rotateLeftD' t = RTick.wait (rotateLeftD t)
 
 {-@ rotateDoubleLeftD' :: {s:Node3_1 | WAVL.notEmptyTree (left (right s)) && IsNode1_2 (right s) } 
@@ -156,3 +160,17 @@ rotateRightD' t = RTick.wait (rotateRightD t)
 rotateDoubleRightD' :: Tree a -> Tick (Tree a)
 rotateDoubleRightD' t = RTick.wait (rotateDoubleRightD t)
 
+{-@ idWavl' :: Tree a -> Tick (Tree a) @-}
+idWavl' :: Tree a -> Tick (Tree a)
+idWavl' t = pure (t)
+
+{-@ tree' :: a -> {v:Int | v >= 0} -> l:Tree a -> r:Tree a -> Tick (Tree a) @-}
+tree' :: a -> Int -> Tree a -> Tree a -> Tick (Tree a)
+tree' a n l r = pure (Tree a n l r)
+
+-- {-@ tree'' :: a -> {v:Int | v >= 0} -> l:Tree a -> r:Tree a -> Tick (Tree a) @-}
+-- tree'' :: a -> Int -> Tree a -> Tick (Tree a) -> Tick (Tree a)
+-- tree'' a n r l = (tree' a n r) <*> l
+
+id2 :: Tick (Tree a) -> Tick (Tree a)
+id2 t = t >>= idWavl'
