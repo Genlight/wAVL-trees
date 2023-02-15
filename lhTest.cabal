@@ -24,6 +24,7 @@ library
     --   AVL,
       WAVL,
       PotentialAnalysis_WAVL
+      -- BinomialHeap
     -- PopPush
   hs-source-dirs:
       src
