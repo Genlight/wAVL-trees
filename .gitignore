@@ -58,3 +58,5 @@ src/.liquid
 ghcid.txt!
 src/PopPush.hs
 src/BinomialHeap.hs
+Dockerfile
+Dockerfile.z3_stack

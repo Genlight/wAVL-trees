@@ -8,5 +8,6 @@
         ":seti -fno-defer-type-errors -fno-defer-typed-holes -fno-defer-out-of-scope-variables",
         ":set -fno-hide-source-paths",
         ":set -Wno-error=missing-home-modules"
-    ]
+    ],
+    "ghcSimple.feature.rangeType": false
 }
