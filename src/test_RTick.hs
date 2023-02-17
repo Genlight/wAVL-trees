@@ -42,10 +42,19 @@ notEmptyTree :: Tree a -> Bool
 notEmptyTree Nil = False
 notEmptyTree _ = True
 
-{-@ tickWrapper :: x:a -> {n:Int | n >= 0} -> l:Tree a -> r:Tick ({r':Tree a | tval r == r'}) -> {t:Tick ({t':Tree a | val t' == x && rk t' == n && left t' == l && tval r == right t'}) | tcost t == tcost r } @-}
-tickWrapper :: a -> Int -> Tree a -> Tick (Tree a) -> Tick (Tree a)
-tickWrapper x n l r = (pure tree) `ap` (pure x) `ap` (pure n) `ap` (pure l) `ap` r
+{-@ tickWrapper :: x:a -> {n:Int | n >= 0} -> l:Tree a -> b:Tree a -> r:Tick ({r':Tree a |  b == r'}) -> {t:Tick ({t':Tree a | val t' == x && rk t' == n && left t' == l && b == right t'}) | tcost t == tcost r } @-}
+tickWrapper :: a -> Int -> Tree a -> Tree a -> Tick (Tree a) -> Tick (Tree a)
+tickWrapper x n l _ r = (pure tree) `ap` (pure x) `ap` (pure n) `ap` (pure l) `ap` r
 
 {-@ tree :: x:a -> {n:Int | n >= 0} -> l:Tree a -> r:Tree a -> {t:Tree a | rk t == n && left t == l && right t == r && val t == x} @-}
 tree :: a -> Int -> Tree a -> Tree a -> Tree a
 tree x n l r = Tree x n l r 
+
+-- Test
+main = do
+    mapM_ print [a,b,c]
+  where
+    a = Tree 8 0 Nil Nil
+    b = Tree 3 0 Nil Nil
+    c = Tree 5 2 a b
+    -- d = tval (tickWrapper 5 2 a b (pure b))

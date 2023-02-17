@@ -104,28 +104,29 @@ import Language.Haskell.Liquid.RTick as RTick
 --                      t  = tUnionL x n l r
 --                      l' = tval l 
 
--- {-@ balRDel' :: a -> n:NodeRank -> {l:MaybeWavlNode2 | Is2ChildN n l} -> Tick ({r:Wavl' | Is3ChildN n r}) -> Tick (t:NEWavl') @-}
--- balRDel' :: a -> Int -> Tree a -> Tick (Tree a) -> Tick (Tree a)
--- balRDel' x 0 Nil (Tick _ Nil) = pure (singleton x)
--- balRDel' x 1 Nil (Tick _ Nil) = pure (singleton x)
--- balRDel' x n l r | n' < rk r' + 3 = t
---                  | n' == rk r' + 3 && rk l' + 2 == n' = t >>= demoteR'
---                  | n' == rk r' + 3 && rk l' + 1 == n' && rk (left l') + 2 == rk l' && rk (right l') + 2 == rk l' = t >>= doubleDemoteR'
---                  | n' == rk r' + 3 && rk l' + 1 == n' && rk (left l') + 1 == rk l' = t >>= rotateRightD'
---                  | n' == rk r' + 3 && rk l' + 1 == n' && rk (left l') + 2 == rk l' && rk (right l') + 1 == rk l' = t >>= rotateDoubleRightD'
---                   where 
---                     t  = tickWrapperR x n l r
---                     r' = tval r
---                     l' = left (tval t) 
---                     n' = val (tval t)
+
+{-@ balRDel' :: a -> n:NodeRank -> {l:MaybeWavlNode2 | Is2ChildN n l} -> Tick ({r:Wavl' | Is3ChildN n r}) -> Tick (t:NEWavl') @-}
+balRDel' :: a -> Int -> Tree a -> Tick (Tree a) -> Tick (Tree a)
+balRDel' x 0 Nil (Tick _ Nil) = pure (singleton x)
+balRDel' x 1 Nil (Tick _ Nil) = pure (singleton x)
+balRDel' x n l r | n < rk r' + 3 = t
+                 | n' == rk r' + 3 && rk l' + 2 == n' = t >>= demoteR'
+                 | n' == rk r' + 3 && rk l' + 1 == n' && rk (left l') + 2 == rk l' && rk (right l') + 2 == rk l' = t >>= doubleDemoteR'
+                 | n' == rk r' + 3 && rk l' + 1 == n' && rk (left l') + 1 == rk l' = t >>= rotateRightD'
+                 | n' == rk r' + 3 && rk l' + 1 == n' && rk (left l') + 2 == rk l' && rk (right l') + 1 == rk l' = t >>= rotateDoubleRightD'
+                  where 
+                    t  = tickWrapperR x n l (tval r) r
+                    r' = tval r
+                    l' = left (tval t) 
+                    n' = rk (tval t)
 
 {-@ tree :: x:a -> n:NodeRank -> l:Wavl' -> r:Wavl' -> {t:NEAlmostWavl' | WAVL.rk t == n && WAVL.left t == l && WAVL.right t == r && WAVL.val t == x} @-}
 tree :: a -> Int -> Tree a -> Tree a -> Tree a
 tree x n l r = Tree x n l r 
 
-{-@ tickWrapperR :: x:a -> n:NodeRank -> l:Wavl' -> r:Tick ({r':Wavl' | tval r == r'}) -> {t:Tick ({t':NEAlmostWavl' | WAVL.rk t' == n && WAVL.left t' == l && WAVL.val t' == x && tval r == WAVL.right t'}) | tcost t == tcost r } @-}
-tickWrapperR :: a -> Int -> Tree a -> Tick (Tree a) -> Tick (Tree a)
-tickWrapperR x n l r = (pure tree) `ap` (pure x) `ap` (pure n) `ap` (pure l) `ap` r
+{-@ tickWrapperR :: x:a -> n:NodeRank -> l:Wavl' -> b:Wavl' -> r:Tick ({r':Wavl' | b == r'}) -> {t:Tick ({t':NEAlmostWavl' | WAVL.rk t' == n && WAVL.left t' == l && WAVL.val t' == x && b == WAVL.right t' }) | tcost t == tcost r } @-}
+tickWrapperR :: a -> Int -> Tree a -> Tree a -> Tick (Tree a) -> Tick (Tree a)
+tickWrapperR x n l _ r = (pure tree) `ap` (pure x) `ap` (pure n) `ap` (pure l) `ap` r
 
 -- {-@ tickWrapperL :: a -> n:NodeRank -> l:Tick (Wavl') -> r:Wavl' -> {t:Tick ({t':NEAlmostWavl' | rk t' == n && left t' == tval l}) | tcost t == tcost l } @-}
 -- tickWrapperL :: a -> Int -> Tick (Tree a) -> Tree a -> Tick (Tree a)
