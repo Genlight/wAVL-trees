@@ -9,7 +9,13 @@ import Prelude hiding (pure, (>>=), (<*>), ap)
 import WAVL
 import Language.Haskell.Liquid.ProofCombinators
 import Language.Haskell.Liquid.RTick as RTick
- 
+
+{-@ type Wavl' = {v:Tree a | WAVL.balanced v } @-}
+{-@ type NEWavl' = {v:Wavl' | WAVL.notEmptyTree v } @-}
+{-@ type MaybeWavlNode' = {v:Wavl' | (not (WAVL.notEmptyTree v) || IsWavlNode v) } @-}
+{-@ type AlmostWavl' = {t:Tree a | (not (WAVL.notEmptyTree t)) || (WAVL.balanced (WAVL.left t) && WAVL.balanced (WAVL.right t)) } @-}
+{-@ type NEAlmostWavl' = {t:AlmostWavl' | WAVL.notEmptyTree t } @-}
+  
 -- potential analysis for deletion
 -- {-@ measure potT @-}
 -- -- {-@ potT :: t:WavlD n -> {v:Int | v <= n}  @-}
@@ -104,27 +110,42 @@ import Language.Haskell.Liquid.RTick as RTick
 --                      t  = tUnionL x n l r
 --                      l' = tval l 
 
-
-{-@ balRDel' :: a -> n:NodeRank -> {l:MaybeWavlNode2 | Is2ChildN n l} -> Tick ({r:Wavl' | Is3ChildN n r}) -> Tick (t:NEWavl') @-}
+{-@ balRDel' :: a -> n:NodeRank -> {l:MaybeWavlNode' | Is2ChildN n l} -> Tick ({r:Wavl' | Is3ChildN n r}) -> Tick (t:NEWavl') @-}
 balRDel' :: a -> Int -> Tree a -> Tick (Tree a) -> Tick (Tree a)
 balRDel' x 0 Nil (Tick _ Nil) = pure (singleton x)
 balRDel' x 1 Nil (Tick _ Nil) = pure (singleton x)
 balRDel' x n l r | n < rk r' + 3 = t
-                 | n' == rk r' + 3 && rk l' + 2 == n' = t >>= demoteR'
-                 | n' == rk r' + 3 && rk l' + 1 == n' && rk (left l') + 2 == rk l' && rk (right l') + 2 == rk l' = t >>= doubleDemoteR'
-                 | n' == rk r' + 3 && rk l' + 1 == n' && rk (left l') + 1 == rk l' = t >>= rotateRightD'
-                 | n' == rk r' + 3 && rk l' + 1 == n' && rk (left l') + 2 == rk l' && rk (right l') + 1 == rk l' = t >>= rotateDoubleRightD'
+                 | n == rk r' + 3 && rk l + 2 == n = t >>= demoteR'
+                 | n == rk r' + 3 && rk l + 1 == n && rk (left l) + 2 == rk l && rk (right l) + 2 == rk l = t >>= doubleDemoteR'
+                 | n == rk r' + 3 && rk l + 1 == n && rk (left l) + 1 == rk l = t >>= rotateRightD'
+                 | n == rk r' + 3 && rk l + 1 == n && rk (left l) + 2 == rk l && rk (right l) + 1 == rk l = t >>= rotateDoubleRightD'
+                 | otherwise = t
                   where 
-                    t  = tickWrapperR x n l (tval r) r
-                    r' = tval r
-                    l' = left (tval t) 
-                    n' = rk (tval t)
-
-{-@ tree :: x:a -> n:NodeRank -> l:Wavl' -> r:Wavl' -> {t:NEAlmostWavl' | WAVL.rk t == n && WAVL.left t == l && WAVL.right t == r && WAVL.val t == x} @-}
+                    t  = useTW x n l r
+                    r' = right (tval t)
+                    
+{-@ tree :: x:a -> n:NodeRank -> {l:MaybeWavlNode' | Is2ChildN n l} -> {r:Wavl' | Is3ChildN n r} -> {t:NEAlmostWavl' | (((rk r) + 3 <= n) || (WAVL.balanced t)) && WAVL.rk t == n && WAVL.left t == l && WAVL.right t == r && WAVL.val t == x} @-}
 tree :: a -> Int -> Tree a -> Tree a -> Tree a
 tree x n l r = Tree x n l r 
 
-{-@ tickWrapperR :: x:a -> n:NodeRank -> l:Wavl' -> b:Wavl' -> r:Tick ({r':Wavl' | b == r'}) -> {t:Tick ({t':NEAlmostWavl' | WAVL.rk t' == n && WAVL.left t' == l && WAVL.val t' == x && b == WAVL.right t' }) | tcost t == tcost r } @-}
+-- Defined in RTick library that can open the Tick
+{-@ exact :: t:Tick a -> {to:Tick ({v: a | v == (tval t)})| to = t} @-}
+exact :: Tick a -> Tick a
+exact (Tick c v) = Tick c v 
+
+{-@ exactWAVL :: v:Tick (v':Wavl) -> {t:Tick (t':Wavl) | tval v == tval t} @-}
+exactWAVL :: Tick (Tree a) -> Tick (Tree a)
+exactWAVL t = exact t
+
+{-@ tvalW :: v:Tick (v':Wavl) -> {t:Wavl | tval v == t} @-}
+tvalW :: Tick (Tree a) -> Tree a
+tvalW t = tval t
+
+{-@ useTW :: x:a -> {n:Int | n >= 0 } -> {l:MaybeWavlNode' | Is2ChildN n l} -> r:Tick ({r':Wavl' | Is3ChildN n r'}) -> {t:Tick ({t':NEAlmostWavl' | val t' == x && rk t' == n && left t' == l }) | tcost t == tcost r } @-}
+useTW :: a -> Int -> Tree a -> Tick (Tree a) -> Tick (Tree a)
+useTW x n l tt = tickWrapperR x n l (tvalW tt) (exact tt)
+
+{-@ tickWrapperR :: x:a -> n:NodeRank -> {l:MaybeWavlNode' | Is2ChildN n l} -> b:Wavl' -> r:Tick ({r':Wavl' | Is3ChildN n r' && b == r'}) -> {t:Tick ({t':NEAlmostWavl' | ((n >= rk (right t') + 3) || (WAVL.balanced t')) && WAVL.rk t' == n && WAVL.left t' == l && WAVL.val t' == x && b == WAVL.right t' }) | tcost t == tcost r } @-}
 tickWrapperR :: a -> Int -> Tree a -> Tree a -> Tick (Tree a) -> Tick (Tree a)
 tickWrapperR x n l _ r = (pure tree) `ap` (pure x) `ap` (pure n) `ap` (pure l) `ap` r
 
@@ -132,12 +153,6 @@ tickWrapperR x n l _ r = (pure tree) `ap` (pure x) `ap` (pure n) `ap` (pure l) `
 -- tickWrapperL :: a -> Int -> Tick (Tree a) -> Tree a -> Tick (Tree a)
 -- tickWrapperL x n l r = (pure tree') `ap` (pure x) `ap` (pure n) `ap` l `ap` (pure r)
 
-{-@ type Wavl' = {v:Tree a | WAVL.balanced v } @-}
-{-@ type NEWavl' = {v:Wavl' | WAVL.notEmptyTree v } @-}
-{-@ type MaybeWavlNode2 = {v:Wavl' | (not (WAVL.notEmptyTree v) || IsWavlNode v) } @-}
-{-@ type AlmostWavl' = {t:Tree a | (not (WAVL.notEmptyTree t)) || (WAVL.balanced (WAVL.left t) && WAVL.balanced (WAVL.right t)) } @-}
-{-@ type NEAlmostWavl' = {t:AlmostWavl' | WAVL.notEmptyTree t } @-}
- 
 {-@ demoteL' :: s:Node3_2 -> Tick ({t:NEWavl | RkDiff s t 1 }) @-}
 demoteL' :: Tree a -> Tick (Tree a)
 demoteL' t = go (WAVL.demoteL t)

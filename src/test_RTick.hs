@@ -56,17 +56,11 @@ exact :: Tick a -> Tick a
 {-@ exact :: t:Tick a -> {to:Tick ({v: a | v == (tval t)})| to = t} @-}
 exact (Tick c v) = Tick c v 
 
-{-@ exactWAVL :: v:Tick (v':Wavl) -> t:Tick (t':Wavl) @-}
+{-@ exactWAVL :: v:Tick (v':Wavl) -> {t:Tick (t':Wavl) | tval v == tval t} @-}
 exactWAVL :: Tick (Tree a) -> Tick (Tree a)
 exactWAVL t = exact t
 
 {-@ useTW :: x:a -> {n:Int | n >= 0 } -> l:Tree a -> r:Tick (r':Tree a) -> {t:Tick ({t':Tree a | val t' == x && rk t' == n && left t' == l }) | tcost t == tcost r } @-}
 useTW :: a -> Int -> Tree a -> Tick (Tree a) -> Tick (Tree a)
 useTW x n l tt = tickWrapper x n l (tval tt) (exact tt)
-
--- should be also be valid, but isn't
--- {-@ tickWrapper' :: x:a -> {n:Int | n >= 0} -> l:Tree a -> b:Tree a -> r:Tick ({r':Tree a |  b == r'}) -> {t:Tick ({t':Tree a | val t' == x && rk t' == n && left t' == l && b == right t'}) | tcost t == tcost r } @-}
--- tickWrapper' :: a -> Int -> Tree a -> Tree a -> Tick (Tree a) -> Tick (Tree a)
--- tickWrapper' x n l _ r = Tree $ (pure x) <*> (pure n) <*> (pure l) <*> r
-
 
