@@ -64,3 +64,7 @@ exactWAVL t = exact t
 useTW :: a -> Int -> Tree a -> Tick (Tree a) -> Tick (Tree a)
 useTW x n l tt = tickWrapper x n l (tval tt) (exact tt)
 
+visitAll :: Tree a -> Tick (Tree a)
+visitAll Nil = RTick.return Nil
+visitAll (Tree x n l r) = Tree <$> (RTick.go x) <*> (pure n) <*> (visitAll l) <*> (visitAll r) -- count 1 step for each visited node
+
