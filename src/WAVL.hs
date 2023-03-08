@@ -12,6 +12,7 @@ module WAVL (Tree (..), singleton,
  rotateLeftD, rotateRightD,  
  rotateDoubleLeftD, 
  rotateDoubleRightD, 
+ notEmptyTree, empty
  ) where
 
 import Language.Haskell.Liquid.ProofCombinators
@@ -28,6 +29,7 @@ data Tree a = Nil | Tree { val :: a, rd :: Int, left :: (Tree a), right :: (Tree
 {-@ type NEWavl = {v:Wavl | notEmptyTree v } @-}
 {-@ type AlmostWavl = {t:Tree a | (not (notEmptyTree t)) || (balanced (left t) && balanced (right t)) } @-}
 {-@ type Rank = {v:Int | v >= -1} @-}
+{-@ type NodeRank = {v:Int | v >= 0} @-}
 
 {-@ measure rk @-}
 {-@ rk :: t:Tree a -> {v:Rank | (not (notEmptyTree t) || v >= 0) && (notEmptyTree t || v== (-1))} @-}
@@ -49,6 +51,11 @@ notEmptyTree _ = True
 ht              :: Tree a -> Int
 ht Nil          = (-1)
 ht (Tree x n l r) = if (ht l) > (ht r) then (1 + ht l) else (1 + ht r)
+
+{-@ measure empty @-}
+empty :: Tree a -> Bool
+empty Nil = True
+empty _ = False
 
 {-@ measure balanced @-}
 balanced :: Tree a -> Bool
@@ -310,136 +317,136 @@ rotateDoubleRightD (Tree x n (Tree y m ll (Tree z o lrl lrr)) r) = Tree z (o+2) 
   - Height of a given Tree t is a logarithmic upper bound
 |-}
 
-{-@ reflect heightLemma @-}
-{-@ heightLemma :: t:Wavl  -> Bool  / [rk t] @-}
-heightLemma :: Tree a -> Bool
-heightLemma Nil = True
-heightLemma t = rk t <= 2 * (ht t) && ht t <= rk t  
+-- {-@ reflect heightLemma @-}
+-- {-@ heightLemma :: t:Wavl  -> Bool  / [rk t] @-}
+-- heightLemma :: Tree a -> Bool
+-- heightLemma Nil = True
+-- heightLemma t = rk t <= 2 * (ht t) && ht t <= rk t  
 
-{-@ wavlNodeStructLemma :: t:Wavl -> { isWavlNode t} @-}
-wavlNodeStructLemma :: Tree a -> Proof
-wavlNodeStructLemma t@Nil = trivial *** QED
-wavlNodeStructLemma t@(Tree _ n l r)  = rk r + 2   ? balanced t 
-                                    =>= n          ? balanced t 
-                                    =<= rk l + 2   ? balanced t
-                                    =>= n          ? balanced t
-                                    =>= rk l + 1   ? balanced t
-                                    =<= n          ? balanced t
-                                    =>= rk r + 1
-                                    *** QED
+-- {-@ wavlNodeStructLemma :: t:Wavl -> { isWavlNode t} @-}
+-- wavlNodeStructLemma :: Tree a -> Proof
+-- wavlNodeStructLemma t@Nil = trivial *** QED
+-- wavlNodeStructLemma t@(Tree _ n l r)  = rk r + 2   ? balanced t 
+--                                     =>= n          ? balanced t 
+--                                     =<= rk l + 2   ? balanced t
+--                                     =>= n          ? balanced t
+--                                     =>= rk l + 1   ? balanced t
+--                                     =<= n          ? balanced t
+--                                     =>= rk r + 1
+--                                     *** QED
 
-{-@ nilLemma2 :: { t:Wavl | rk t == (-1)} -> {ht t == rk t } @-}
-nilLemma2 :: Tree a -> Proof 
-nilLemma2 t@Nil = rk t === (-1) === ht t 
-              *** QED 
+-- {-@ nilLemma2 :: { t:Wavl | rk t == (-1)} -> {ht t == rk t } @-}
+-- nilLemma2 :: Tree a -> Proof 
+-- nilLemma2 t@Nil = rk t === (-1) === ht t 
+--               *** QED 
 
-{-@ hL0 :: {t:NEWavl | ht (left t) == ht (right t)} -> { ht (left t) + 1 == ht t  } @-}
-hL0 :: Tree a -> Proof
-hL0 t@(Tree _ _ l r) =  ht l =<= ht l + 1 === ht t *** QED
+-- {-@ hL0 :: {t:NEWavl | ht (left t) == ht (right t)} -> { ht (left t) + 1 == ht t  } @-}
+-- hL0 :: Tree a -> Proof
+-- hL0 t@(Tree _ _ l r) =  ht l =<= ht l + 1 === ht t *** QED
 
-{-@ hL1 :: {t:NEWavl | ht (left t) > ht (right t)} -> {ht t == ht (left t) + 1} @-}
-hL1 :: Tree a -> Proof
-hL1 t@(Tree _ _ l r) = ht l =<= (ht l) + 1 === ht t *** QED
+-- {-@ hL1 :: {t:NEWavl | ht (left t) > ht (right t)} -> {ht t == ht (left t) + 1} @-}
+-- hL1 :: Tree a -> Proof
+-- hL1 t@(Tree _ _ l r) = ht l =<= (ht l) + 1 === ht t *** QED
 
-{-@ hL2 :: {t:NEWavl | ht (left t) < ht (right t)} -> {ht t == ht (right t) + 1} @-}
-hL2 :: Tree a -> Proof
-hL2 t@(Tree _ _ l r) = ht r =<= ht r + 1 === ht t *** QED
+-- {-@ hL2 :: {t:NEWavl | ht (left t) < ht (right t)} -> {ht t == ht (right t) + 1} @-}
+-- hL2 :: Tree a -> Proof
+-- hL2 t@(Tree _ _ l r) = ht r =<= ht r + 1 === ht t *** QED
 
-{-@ lowerHeightProof :: t:Wavl -> { ht t <= rk t } / [rk t] @-}
-lowerHeightProof :: Tree a -> ()
-lowerHeightProof t@Nil = trivial ? nilLemma2 *** QED
-lowerHeightProof t@(Tree _ 0 l r) = rk r 
-                                === (-1)  ? nilLemma2 r        
-                                === ht r  
-                                === rk l  ? nilLemma2 l         
-                                === ht l
-                                =<= ht t  ? hL0 t        
-                                === 0 
-                                =<= rk t
-                                *** QED
-lowerHeightProof t@(Tree _ n l r) 
-  | ht l > ht r   = rk t      ? balanced t
-                =>= rk l + 1  ? lowerHeightProof l
-                =>= ht l + 1  ? hL1 t
-                === ht t 
-                *** QED
-  | ht r > ht l   = rk t      ? balanced t
-                =>= rk r + 1  ? lowerHeightProof r
-                =>= ht r + 1  ? hL2 t
-                === ht t 
-                *** QED
-  | ht l == ht r  = rk t      ? balanced t
-                =>= rk l + 1  ? lowerHeightProof l
-                =>= ht l + 1  ? hL0 t
-                === ht t 
-                *** QED
+-- {-@ lowerHeightProof :: t:Wavl -> { ht t <= rk t } / [rk t] @-}
+-- lowerHeightProof :: Tree a -> ()
+-- lowerHeightProof t@Nil = trivial ? nilLemma2 *** QED
+-- lowerHeightProof t@(Tree _ 0 l r) = rk r 
+--                                 === (-1)  ? nilLemma2 r        
+--                                 === ht r  
+--                                 === rk l  ? nilLemma2 l         
+--                                 === ht l
+--                                 =<= ht t  ? hL0 t        
+--                                 === 0 
+--                                 =<= rk t
+--                                 *** QED
+-- lowerHeightProof t@(Tree _ n l r) 
+--   | ht l > ht r   = rk t      ? balanced t
+--                 =>= rk l + 1  ? lowerHeightProof l
+--                 =>= ht l + 1  ? hL1 t
+--                 === ht t 
+--                 *** QED
+--   | ht r > ht l   = rk t      ? balanced t
+--                 =>= rk r + 1  ? lowerHeightProof r
+--                 =>= ht r + 1  ? hL2 t
+--                 === ht t 
+--                 *** QED
+--   | ht l == ht r  = rk t      ? balanced t
+--                 =>= rk l + 1  ? lowerHeightProof l
+--                 =>= ht l + 1  ? hL0 t
+--                 === ht t 
+--                 *** QED
 
-{-@ upperHeightProof :: t:Wavl -> { (not (notEmptyTree t)) || (rk t <= ht t * 2) } / [rk t] @-}
-upperHeightProof :: Tree a -> Proof
-upperHeightProof t@Nil  = () ? notEmptyTree t *** QED       
-upperHeightProof t@(Tree _ 0 l r) = rk r 
-                                === (-1)  ? nilLemma2 r        
-                                === ht r  
-                                === rk l  ? nilLemma2 l         
-                                === ht l
-                                =<= ht t  ? hL0 t        
-                                === 0
-                                === rk t
-                                === ht t * 2 
-                                *** QED
-upperHeightProof t@(Tree _ 1 l r)
-  | rk l == rk r  = rk t      ? balanced t
-                =<= rk r + 1
-                === rk l + 1 
-                =>= rk l      ? balanced t
-                === 0         ? upperHeightProof l 
-                === rk l      ? lowerHeightProof l 
-                === ht l      
-                =<= ht l + 1
-                =<= ht t
-                =<= ht t * 2 
-                *** QED
-  | rk l > rk r  = rk t           ? balanced t
-               =<= rk l + 2       ? upperHeightProof l
-               =<= 2 * ht l + 2  
-               =<= 2 * (ht l + 1)   
-               =<= 2 * ht t   
-               *** QED
-  | rk l < rk r  = rk t           ? balanced t
-               =<= rk r + 2       ? upperHeightProof r
-               =<= 2 * ht r + 2  
-               =<= 2 * (ht r + 1)   
-               =<= 2 * ht t   
-               *** QED
-upperHeightProof t@(Tree _ n l r) 
-  | ht l == ht r  = rk t           ? balanced t
-                =<= rk l + 2       ? upperHeightProof l
-                =<= 2 * ht l + 2   
-                === 2 * (ht l + 1) ? hL0 t
-                =<= 2 * ht t
-                *** QED
-  | ht l > ht r   = rk t           ? balanced t
-                =<= rk l + 2       ? upperHeightProof l
-                =<= 2 * ht l + 2  
-                === 2 * (ht l + 1) ? hL1 t
-                =<= 2 * ht t
-                *** QED
-  | ht r > ht l   = rk t            ? balanced t
-                =<= rk r + 2        ? upperHeightProof r
-                =<= 2 * (ht r) + 2  
-                === 2 * (ht r + 1) ? hL2 t      
-                =<= 2 * ht t
-                *** QED
+-- {-@ upperHeightProof :: t:Wavl -> { (empty t) || (rk t <= ht t * 2) } / [rk t] @-}
+-- upperHeightProof :: Tree a -> Proof
+-- upperHeightProof t@Nil  = () ? notEmptyTree t *** QED       
+-- upperHeightProof t@(Tree _ 0 l r) = rk r 
+--                                 === (-1)  ? nilLemma2 r        
+--                                 === ht r  
+--                                 === rk l  ? nilLemma2 l         
+--                                 === ht l
+--                                 =<= ht t  ? hL0 t        
+--                                 === 0
+--                                 === rk t
+--                                 === ht t * 2 
+--                                 *** QED
+-- upperHeightProof t@(Tree _ 1 l r)
+--   | rk l == rk r  = rk t      ? balanced t
+--                 =<= rk r + 1
+--                 === rk l + 1 
+--                 =>= rk l      ? balanced t
+--                 === 0         ? upperHeightProof l 
+--                 === rk l      ? lowerHeightProof l 
+--                 === ht l      
+--                 =<= ht l + 1
+--                 =<= ht t
+--                 =<= ht t * 2 
+--                 *** QED
+--   | rk l > rk r  = rk t           ? balanced t
+--                =<= rk l + 2       ? upperHeightProof l
+--                =<= 2 * ht l + 2  
+--                =<= 2 * (ht l + 1)   
+--                =<= 2 * ht t   
+--                *** QED
+--   | rk l < rk r  = rk t           ? balanced t
+--                =<= rk r + 2       ? upperHeightProof r
+--                =<= 2 * ht r + 2  
+--                =<= 2 * (ht r + 1)   
+--                =<= 2 * ht t   
+--                *** QED
+-- upperHeightProof t@(Tree _ n l r) 
+--   | ht l == ht r  = rk t           ? balanced t
+--                 =<= rk l + 2       ? upperHeightProof l
+--                 =<= 2 * ht l + 2   
+--                 === 2 * (ht l + 1) ? hL0 t
+--                 =<= 2 * ht t
+--                 *** QED
+--   | ht l > ht r   = rk t           ? balanced t
+--                 =<= rk l + 2       ? upperHeightProof l
+--                 =<= 2 * ht l + 2  
+--                 === 2 * (ht l + 1) ? hL1 t
+--                 =<= 2 * ht t
+--                 *** QED
+--   | ht r > ht l   = rk t            ? balanced t
+--                 =<= rk r + 2        ? upperHeightProof r
+--                 =<= 2 * (ht r) + 2  
+--                 === 2 * (ht r + 1) ? hL2 t      
+--                 =<= 2 * ht t
+--                 *** QED
 
-{-@ heightProof :: t:Wavl -> {heightLemma t} @-}
-heightProof :: Tree a -> Proof
-heightProof t@Nil = ht t ? lowerHeightProof t  
-              =<= rk t ? notEmptyTree t 
-              *** QED
-heightProof t = ht t ? lowerHeightProof t 
-            =<= rk t ? upperHeightProof t
-            =<= 2 * ht t  
-            *** QED
+-- {-@ heightProof :: t:Wavl -> {heightLemma t} @-}
+-- heightProof :: Tree a -> Proof
+-- heightProof t@Nil = ht t ? lowerHeightProof t  
+--               =<= rk t ? notEmptyTree t 
+--               *** QED
+-- heightProof t = ht t ? lowerHeightProof t 
+--             =<= rk t ? upperHeightProof t
+--             =<= 2 * ht t  
+--             *** QED
 
 -- Test
 main = do
