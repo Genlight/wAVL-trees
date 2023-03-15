@@ -21,10 +21,11 @@ import Language.Haskell.Liquid.RTick as RTick
 -- Basic functions
 {-@ data Tree [rk] a = Nil | Tree { val :: a, 
                                     rd :: {v:Int | v >= 0 }, 
-                                    left :: Tree a,
-                                    right :: Tree a } @-} 
+                                    left :: ChildT a rd,
+                                    right :: ChildT a rd } @-} 
 data Tree a = Nil | Tree { val :: a, rd :: Int, left :: (Tree a), right :: (Tree a)} deriving Show
 
+{-@ type ChildT a K = {v:Tree a | rk v <= K  && K <= rk v + 3} @-}
 {-@ type Wavl = {v: Tree a | balanced v } @-}
 {-@ type NEWavl = {v:Wavl | notEmptyTree v } @-}
 {-@ type AlmostWavl = {t:Tree a | (not (notEmptyTree t)) || (balanced (left t) && balanced (right t)) } @-}
