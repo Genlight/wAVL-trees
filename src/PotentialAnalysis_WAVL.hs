@@ -23,12 +23,18 @@ import Language.Haskell.Liquid.RTick as RTick
 potT :: Tree a -> Int
 potT Nil      = 0
 potT t@(Tree _ n l r) 
-  | 0 == n              = potT l + potT r    -- Leaf-Node
   | rk l == rk r && rk l + 2 == n = 1 + potT l + potT r        -- 2,2-Node
-  -- | rk l + 3 == n && rk r + 2 == n    = 1 + potT l + potT r    -- 2,3-Node, not possible, since only Wavl' are allowed
-  -- | rk r + 3 == n && rk l + 2 == n    = 1 + potT l + potT r    -- 3,2-Node, not possible, since only Wavl' are allowed
   | otherwise = potT l + potT r                                -- 1,*-Nodes
 
+{-@ measure potT2 @-}
+{-@ potT2 :: t:AlmostWavl' -> Int @-}
+potT2 :: Tree a -> Int 
+potT2 t@Nil = 0
+potT2 t@(Tree _ n l r)
+  | rk l + 3 == n && rk r + 2 == n    = 1 + potT l + potT r    -- 2,3-Node
+  | rk r + 3 == n && rk l + 2 == n    = 1 + potT l + potT r    -- 3,2-Node
+  | otherwise = potT l + potT r
+  
 {-|
     THEOREM 4.1. In a wavl tree with bottom-up rebalancing, there are at most d demote
     steps over all deletions, where d is the number of deletions.
@@ -119,7 +125,8 @@ balRDel' x n l r  | n <  rk r' + 3 = t
                   where 
                     t = RTick.step (tcost r) (pure (Tree x n l r')) 
                     r' = tval r
-
+-- if demote step: potential is reduced by 1 (amort. cost of 0)
+-- if rotate: potT t <= potT2 (Tree x n l r) + 1
 
 -- Proof of theorem 4.3: 
 -- {-@ theorem4_3 :: x:a -> t:Wavl' -> { tcost (delete' x t) <= potT t + 1 } @-}
