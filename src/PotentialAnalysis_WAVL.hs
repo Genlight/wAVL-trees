@@ -17,17 +17,17 @@ import Language.Haskell.Liquid.RTick as RTick
 {-@ type NEAlmostWavl' = {t:AlmostWavl' | WAVL.notEmptyTree t } @-}
   
 -- potential analysis for deletion
--- {-@ measure potT @-}
--- -- {-@ potT :: t:WavlD n -> {v:Int | v <= n}  @-}
--- {-@ potT :: t:Wavl -> Int @-}
--- potT :: Tree a -> Int
--- potT WAVL.Nil      = 0
--- potT t@(WAVL.Tree _ n l r) 
---   | 0 == n              = potT l + potT r    -- Leaf-Node
---   | WAVL.rk l == rk r && WAVL.rk l + 2 == n = 1 + potT l + potT r        -- 2,2-Node
---   | WAVL.rk l + 3 == n && WAVL.rk r + 2 == n    = 1 + potT l + potT r    -- 2,3-Node
---   | WAVL.rk r + 3 == n && WAVL.rk l + 2 == n    = 1 + potT l + potT r    -- 3,2-Node
---   | otherwise = potT l + potT r
+{-@ measure potT @-}
+-- {-@ potT :: t:WavlD n -> {v:Int | v <= n}  @-}
+{-@ potT :: t:Wavl' -> Int @-}
+potT :: Tree a -> Int
+potT Nil      = 0
+potT t@(Tree _ n l r) 
+  | 0 == n              = potT l + potT r    -- Leaf-Node
+  | rk l == rk r && rk l + 2 == n = 1 + potT l + potT r        -- 2,2-Node
+  | rk l + 3 == n && rk r + 2 == n    = 1 + potT l + potT r    -- 2,3-Node
+  | rk r + 3 == n && rk l + 2 == n    = 1 + potT l + potT r    -- 3,2-Node
+  | otherwise = potT l + potT r
 
 {-@ type NodeRank = {v:Int | v >= 0} @-}
 {-|
@@ -96,30 +96,28 @@ getMin' (Tree x n l@(Tree _ _ _ _) r) = ((balLDel' x n l' r), x')
   where
     (l', x')             = getMin' l
 
-{-@ balLDel' :: a -> n:NodeRank -> {l:Tick ({l':Wavl' | Is3ChildN n l'}) | tcost l >= 0 } -> {r':MaybeWavlNode' | Is2ChildN n r'} -> {t':Tick ({t:NEWavl' | (rk t == n || rk t + 1 == n) }) | tcost t' >= 0 } @-}
+{-@ balLDel' :: a -> n:NodeRank -> {l:Tick ({l':Wavl' | Is3ChildN n l'}) | tcost l >= 0 } -> {r':MaybeWavlNode' | Is2ChildN n r'} -> {t':Tick ({t:NEWavl' | (rk t == n || rk t + 1 == n) }) | tcost t' >= 0 && tcost t' >= tcost l } @-}
 balLDel' :: a -> Int -> Tick (Tree a) -> Tree a -> Tick (Tree a)
-balLDel' x 0 (Tick _ Nil) Nil  = pure (singleton x)
-balLDel' x 1 (Tick _ Nil) Nil  = pure (singleton x)
+balLDel' x 0 l@(Tick _ Nil) Nil  = RTick.step (tcost l) (pure (singleton x))
+balLDel' x 1 l@(Tick _ Nil) Nil  = RTick.step (tcost l) (pure (singleton x))
 balLDel' x n l r | n <= rk l' + 2 = t
-                 | n == rk l' + 3 && rk r + 2 == n = RTick.wmap demoteL t
-                 | n == rk l' + 3 && rk r + 1 == n && rk (left r) + 2 == rk r && (rk (right r)) + 2 == rk r = RTick.wmap doubleDemoteL t
-                 | n == rk l' + 3 && rk r + 1 == n && rk (right r) + 1 == rk r = RTick.wmap rotateLeftD t
-                 | n == rk l' + 3 && rk r + 1 == n && rk (right r) + 2 == rk r && rk (left r) + 1 == rk r = RTick.wmap rotateDoubleLeftD t
-                   where
-                     t  | tcost l == 0 = pure (Tree x n l' r)
-                        | otherwise = RTick.waitN (tcost l) (Tree x n l' r)
-                     l' = tval l
+                 | n == rk l' + 3 && rk r + 2 == n = RTick.fmap demoteL t -- amort. cost 0
+                 | n == rk l' + 3 && rk r + 1 == n && rk (left r) + 2 == rk r && (rk (right r)) + 2 == rk r = RTick.fmap doubleDemoteL t --same 
+                 | n == rk l' + 3 && rk r + 1 == n && rk (right r) + 1 == rk r = RTick.wmap rotateLeftD t -- +1
+                 | n == rk l' + 3 && rk r + 1 == n && rk (right r) + 2 == rk r && rk (left r) + 1 == rk r = RTick.wmap rotateDoubleLeftD t -- +1
+                  where
+                    t = RTick.step (tcost l) (pure (Tree x n l' r))
+                    l' = tval l
 
-{-@ balRDel' :: a -> n:NodeRank -> {l:MaybeWavlNode' | Is2ChildN n l} -> {r:Tick ({r':Wavl' | Is3ChildN n r'}) | tcost r >= 0 } -> {t': Tick ({t:NEWavl' | (rk t == n || rk t + 1 == n) }) | tcost t' >= 0 } @-}
+{-@ balRDel' :: a -> n:NodeRank -> {l:MaybeWavlNode' | Is2ChildN n l} -> {r:Tick ({r':Wavl' | Is3ChildN n r'}) | tcost r >= 0 } -> {t': Tick ({t:NEWavl' | (rk t == n || rk t + 1 == n) }) | tcost t' >= 0 && tcost t' >= tcost r } @-}
 balRDel' :: a -> Int -> Tree a -> Tick (Tree a) -> Tick (Tree a)
-balRDel' x 0 Nil (Tick _ Nil) = pure (singleton x)
-balRDel' x 1 Nil (Tick _ Nil) = pure (singleton x)
+balRDel' x 0 Nil r@(Tick _ Nil) = RTick.step (tcost r) (pure (singleton x))
+balRDel' x 1 Nil r@(Tick _ Nil) = RTick.step (tcost r) (pure (singleton x))
 balRDel' x n l r  | n <  rk r' + 3 = t
-                  | n == rk r' + 3 && rk l + 2 == n = RTick.wmap WAVL.demoteR t 
-                  | n == rk r' + 3 && rk l + 1 == n && rk (left l) + 2 == rk l && rk (right l) + 2 == rk l =RTick.wmap WAVL.doubleDemoteR t
-                  | n == rk r' + 3 && rk l + 1 == n && rk (left l) + 1 == rk l = RTick.wmap WAVL.rotateRightD t
-                  | n == rk r' + 3 && rk l + 1 == n && rk (left l) + 2 == rk l && rk (right l) + 1 == rk l = RTick.wmap WAVL.rotateDoubleRightD t
+                  | n == rk r' + 3 && rk l + 2 == n = RTick.fmap WAVL.demoteR t -- amort. cost 0
+                  | n == rk r' + 3 && rk l + 1 == n && rk (left l) + 2 == rk l && rk (right l) + 2 == rk l = RTick.fmap WAVL.doubleDemoteR t -- same
+                  | n == rk r' + 3 && rk l + 1 == n && rk (left l) + 1 == rk l = RTick.wmap WAVL.rotateRightD t -- +1
+                  | n == rk r' + 3 && rk l + 1 == n && rk (left l) + 2 == rk l && rk (right l) + 1 == rk l = RTick.wmap WAVL.rotateDoubleRightD t -- +1
                   where 
-                    t | tcost r == 0 =  pure (Tree x n l r') 
-                      | otherwise = RTick.waitN (tcost r) (Tree x n l r') 
+                    t = RTick.step (tcost r) (pure (Tree x n l r')) 
                     r' = tval r
