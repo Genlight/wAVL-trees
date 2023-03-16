@@ -1,6 +1,7 @@
 {-@ LIQUID "--short-names" @-}
 {-@ LIQUID "--reflection" @-}
 {-@ LIQUID "--ple" @-}
+{-@ LIQUID "--bscope" @-}
 
 module Test_Rtick where
 
@@ -110,7 +111,7 @@ exact :: Tick a -> Tick a
 {-@ exact :: t:Tick a -> {to:Tick ({v: a | v == (tval t)})| to = t} @-}
 exact (Tick c v) = Tick c v 
 
-{-@ exactWAVL :: v:Tick (v':Wavl) -> {t:Tick (t':Wavl) | tval v == tval t} @-}
+{-@ exactWAVL :: v:Tick (v':Wavl) -> {t:Tick {t':Wavl | tval t == t'} | tval v == tval t} @-}
 exactWAVL :: Tick (Tree a) -> Tick (Tree a)
 exactWAVL t = exact t
 
