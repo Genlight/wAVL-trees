@@ -15,10 +15,10 @@ import Language.Haskell.Liquid.RTick as RTick
 {-@ type MaybeWavlNode' = {v:Wavl' | (not (WAVL.notEmptyTree v) || IsWavlNode v) } @-}
 {-@ type AlmostWavl' = {t:Tree a | (not (WAVL.notEmptyTree t)) || (WAVL.balanced (WAVL.left t) && WAVL.balanced (WAVL.right t)) } @-}
 {-@ type NEAlmostWavl' = {t:AlmostWavl' | WAVL.notEmptyTree t } @-}
-  
+{-@ type NodeRank = {v:Int | v >= 0} @-}
+
 -- potential analysis for deletion
 {-@ measure potT @-}
--- {-@ potT :: t:WavlD n -> {v:Int | v <= n}  @-}
 {-@ potT :: t:Wavl' -> Int @-}
 potT :: Tree a -> Int
 potT Nil      = 0
@@ -29,7 +29,6 @@ potT t@(Tree _ n l r)
   | rk r + 3 == n && rk l + 2 == n    = 1 + potT l + potT r    -- 3,2-Node
   | otherwise = potT l + potT r
 
-{-@ type NodeRank = {v:Int | v >= 0} @-}
 {-|
     THEOREM 4.1. In a wavl tree with bottom-up rebalancing, there are at most d demote
     steps over all deletions, where d is the number of deletions.
@@ -96,7 +95,7 @@ getMin' (Tree x n l@(Tree _ _ _ _) r) = ((balLDel' x n l' r), x')
   where
     (l', x')             = getMin' l
 
-{-@ balLDel' :: a -> n:NodeRank -> {l:Tick ({l':Wavl' | Is3ChildN n l'}) | tcost l >= 0 } -> {r':MaybeWavlNode' | Is2ChildN n r'} -> {t':Tick ({t:NEWavl' | (rk t == n || rk t + 1 == n) }) | tcost t' >= 0 && tcost t' >= tcost l } @-}
+{-@ balLDel' :: a -> n:NodeRank -> {l:Tick ({l':Wavl' | Is3ChildN n l'}) | tcost l >= 0 } -> {r':MaybeWavlNode' | Is2ChildN n r'} -> {t':Tick ({t:NEWavl' | (rk t == n || rk t + 1 == n) }) | tcost t' >= 0 && (tcost t' == tcost l || tcost t' == tcost l + 1) } @-}
 balLDel' :: a -> Int -> Tick (Tree a) -> Tree a -> Tick (Tree a)
 balLDel' x 0 l@(Tick _ Nil) Nil  = RTick.step (tcost l) (pure (singleton x))
 balLDel' x 1 l@(Tick _ Nil) Nil  = RTick.step (tcost l) (pure (singleton x))
@@ -109,7 +108,7 @@ balLDel' x n l r | n <= rk l' + 2 = t
                     t = RTick.step (tcost l) (pure (Tree x n l' r))
                     l' = tval l
 
-{-@ balRDel' :: a -> n:NodeRank -> {l:MaybeWavlNode' | Is2ChildN n l} -> {r:Tick ({r':Wavl' | Is3ChildN n r'}) | tcost r >= 0 } -> {t': Tick ({t:NEWavl' | (rk t == n || rk t + 1 == n) }) | tcost t' >= 0 && tcost t' >= tcost r } @-}
+{-@ balRDel' :: a -> n:NodeRank -> {l:MaybeWavlNode' | Is2ChildN n l} -> {r:Tick ({r':Wavl' | Is3ChildN n r'}) | tcost r >= 0 } -> {t': Tick ({t:NEWavl' | (rk t == n || rk t + 1 == n) }) | tcost t' >= 0 && (tcost t' == tcost r || tcost t' == tcost r + 1) } @-}
 balRDel' :: a -> Int -> Tree a -> Tick (Tree a) -> Tick (Tree a)
 balRDel' x 0 Nil r@(Tick _ Nil) = RTick.step (tcost r) (pure (singleton x))
 balRDel' x 1 Nil r@(Tick _ Nil) = RTick.step (tcost r) (pure (singleton x))
