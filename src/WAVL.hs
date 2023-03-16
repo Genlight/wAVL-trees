@@ -17,6 +17,18 @@ module WAVL (Tree (..), singleton,
 
 import Language.Haskell.Liquid.ProofCombinators
 import Language.Haskell.Liquid.RTick as RTick
+import Prelude hiding (pure)
+
+-- {-@ reflect demoteL @-}
+-- {-@ reflect demoteR @-}
+-- {-@ reflect doubleDemoteL @-}
+-- {-@ reflect doubleDemoteR @-}
+-- {-@ reflect rotateDoubleLeftD @-}
+-- {-@ reflect rotateDoubleRightD @-}
+-- {-@ reflect rotateRightD @-}
+-- {-@ reflect rotateLeftD @-}
+-- {-@ reflect singleton @-}
+-- {-@ reflect nil @-}
 
 -- Basic functions
 {-@ data Tree [rk] a = Nil | Tree { val :: a, 
