@@ -44,7 +44,7 @@ import Language.Haskell.Liquid.RTick as RTick
 -- {-@ type WavlD n = {t:Wavl | n >= 0 } @-}
 
 -- Deletion functions
-{-@ delete' :: _ -> s:Wavl' -> Tick ({t:Wavl' | (EqRk s t) || (RkDiff s t 1) }) @-}
+{-@ delete' :: _ -> s:Wavl' -> {t':Tick ({t:Wavl' | (EqRk s t) || (RkDiff s t 1) }) | tcost t' >= 0 } @-}
 delete' :: (Ord a) => a -> Tree a -> Tick (Tree a)
 delete' _ Nil = pure Nil
 delete' y (Tree x n l@Nil r@Nil)
@@ -76,7 +76,7 @@ delete' y (Tree x n l@(Tree _ _ _ _) r@(Tree _ _ _ _))
       l' = delete' x l
       r' = delete' x r
 
-{-@ merge' :: a -> l:Wavl' -> r:Wavl' -> {v:NodeRank | WavlRankN v l r }  -> Tick ({t:Wavl' | EqRkN v t || RkDiffN v t 1 }) @-}
+{-@ merge' :: a -> l:Wavl' -> r:Wavl' -> {v:NodeRank | WavlRankN v l r }  -> {t':Tick ({t:Wavl' | EqRkN v t || RkDiffN v t 1 }) | tcost t' >= 0 } @-}
 merge' :: a -> Tree a -> Tree a -> Int -> Tick (Tree a)
 merge' _ Nil Nil _ = pure Nil
 merge' _ Nil r _  = pure r
@@ -85,7 +85,7 @@ merge' x l r n    = balRDel' y n l r'
   where
    (r', y)     = getMin' r
 
-{-@  getMin' :: v:NEWavl' -> (Tick ({t:Wavl' | (EqRk v t) || (RkDiff v t 1) }), _) @-} 
+{-@  getMin' :: v:NEWavl' -> ({t':Tick ({t:Wavl' | (EqRk v t) || (RkDiff v t 1) }) | tcost t' >= 0 }, _) @-} 
 getMin' :: Tree a -> (Tick (Tree a), a)
 getMin' (Tree x 0 Nil Nil) = (pure Nil, x)
 getMin' (Tree x 1 Nil r@(Tree _ _ _ _)) = (pure r, x)
@@ -96,7 +96,7 @@ getMin' (Tree x n l@(Tree _ _ _ _) r) = ((balLDel' x n l' r), x')
   where
     (l', x')             = getMin' l
 
-{-@ balLDel' :: a -> n:NodeRank -> {l:Tick ({l':Wavl' | Is3ChildN n l'}) | tcost l >= 0 } -> {r':MaybeWavlNode' | Is2ChildN n r'} -> Tick ({t:NEWavl' | (rk t == n || rk t + 1 == n) }) @-}
+{-@ balLDel' :: a -> n:NodeRank -> {l:Tick ({l':Wavl' | Is3ChildN n l'}) | tcost l >= 0 } -> {r':MaybeWavlNode' | Is2ChildN n r'} -> {t':Tick ({t:NEWavl' | (rk t == n || rk t + 1 == n) }) | tcost t' >= 0 } @-}
 balLDel' :: a -> Int -> Tick (Tree a) -> Tree a -> Tick (Tree a)
 balLDel' x 0 (Tick _ Nil) Nil  = pure (singleton x)
 balLDel' x 1 (Tick _ Nil) Nil  = pure (singleton x)
@@ -111,7 +111,7 @@ balLDel' x n l r | n <= rk l' + 2 = t
                      l' = tvalW l
                      l'' = tval l
 
-{-@ balRDel' :: a -> n:NodeRank -> {l:MaybeWavlNode' | Is2ChildN n l} -> {r:Tick ({r':Wavl' | Is3ChildN n r'}) | tcost r >= 0 } -> Tick ({t:NEWavl' | (rk t == n || rk t + 1 == n) }) @-}
+{-@ balRDel' :: a -> n:NodeRank -> {l:MaybeWavlNode' | Is2ChildN n l} -> {r:Tick ({r':Wavl' | Is3ChildN n r'}) | tcost r >= 0 } -> {t': Tick ({t:NEWavl' | (rk t == n || rk t + 1 == n) }) | tcost t' >= 0 } @-}
 balRDel' :: a -> Int -> Tree a -> Tick (Tree a) -> Tick (Tree a)
 balRDel' x 0 Nil (Tick _ Nil) = pure (singleton x)
 balRDel' x 1 Nil (Tick _ Nil) = pure (singleton x)
@@ -134,36 +134,40 @@ balRDel' x n l r  | n < (rk (right (tval t)) + 3) = t
 tvalW :: Tick (Tree a) -> Tree a
 tvalW t = tval t
 
-{-@ demoteL' :: s:Node3_2 -> Tick ({t:NEWavl | RkDiff s t 1 }) @-}
+{-@ demoteL' :: s:Node3_2 -> {t': Tick ({t:NEWavl | RkDiff s t 1 }) | tcost t' >= 0 } @-}
 demoteL' :: Tree a -> Tick (Tree a)
-demoteL' t = go (WAVL.demoteL t)
+demoteL' t = RTick.wait (WAVL.demoteL t)
+-- demoteL' t = go (WAVL.demoteL t)
 
-{-@ doubleDemoteL' :: {s:Node3_1 | IsNode2_2 (right s) } -> Tick ({t:NEWavl | RkDiff s t 1}) @-}
+{-@ doubleDemoteL' :: {s:Node3_1 | IsNode2_2 (right s) } -> {t':Tick ({t:NEWavl | RkDiff s t 1}) | tcost t' >= 0 } @-}
 doubleDemoteL' :: Tree a -> Tick (Tree a)
-doubleDemoteL' t = RTick.go (doubleDemoteL t)
+doubleDemoteL' t = RTick.wait (doubleDemoteL t)
+-- doubleDemoteL' t = RTick.go (doubleDemoteL t)
 
-{-@ rotateLeftD' :: {s:Node3_1 | Child1 (rk (right s)) (right (right s)) } -> Tick ({t:NEWavl | EqRk s t }) @-}
+{-@ rotateLeftD' :: {s:Node3_1 | Child1 (rk (right s)) (right (right s)) } -> {t':Tick ({t:NEWavl | EqRk s t }) | tcost t' >= 0 } @-}
 rotateLeftD' :: Tree a -> Tick (Tree a)
 rotateLeftD' t = RTick.wait (rotateLeftD t)
 
 {-@ rotateDoubleLeftD' :: {s:Node3_1 | WAVL.notEmptyTree (left (right s)) && IsNode1_2 (right s) } 
-                              -> Tick ({t:NEWavl | EqRk s t}) @-}
+                              -> {t': Tick ({t:NEWavl | EqRk s t}) | tcost t' >= 0 } @-}
 rotateDoubleLeftD' :: Tree a -> Tick (Tree a)
 rotateDoubleLeftD' t = RTick.wait (rotateDoubleLeftD t)
 
-{-@ demoteR' :: s:Node2_3 -> Tick ({t:NEWavl | RkDiff s t 1 }) @-}
+{-@ demoteR' :: s:Node2_3 -> {t':Tick ({t:NEWavl | RkDiff s t 1 }) | tcost t' >= 0 } @-}
 demoteR' :: Tree a -> Tick (Tree a)
-demoteR' t = go (demoteR t)
+demoteR' t = RTick.wait (demoteR t)
+-- demoteR' t = go (demoteR t)
 
-{-@ doubleDemoteR' :: {s:Node1_3 | IsNode2_2 (left s) } -> Tick ({t:NEWavl | RkDiff s t 1 }) @-}
+{-@ doubleDemoteR' :: {s:Node1_3 | IsNode2_2 (left s) } -> {t':Tick ({t:NEWavl | RkDiff s t 1 }) | tcost t' >= 0 } @-}
 doubleDemoteR' :: Tree a -> Tick (Tree a)
-doubleDemoteR' t = go (doubleDemoteR t)
+doubleDemoteR' t = RTick.wait (doubleDemoteR t)
+-- doubleDemoteR' t = go (doubleDemoteR t)
 
-{-@ rotateRightD' :: {s:Node1_3 | Child1 (rk (left s)) (left (left s))  } -> Tick {t:NEWavl | EqRk s t } @-}
+{-@ rotateRightD' :: {s:Node1_3 | Child1 (rk (left s)) (left (left s))  } -> {t':Tick ({t:NEWavl | EqRk s t }) | tcost t' >= 0 } @-}
 rotateRightD' :: Tree a -> Tick (Tree a)
 rotateRightD' t = RTick.wait (rotateRightD t)
 
-{-@ rotateDoubleRightD' :: {s:Node1_3 | WAVL.notEmptyTree (right (left s)) && IsNode2_1 (left s) } -> Tick {t:NEWavl | EqRk s t } @-}
+{-@ rotateDoubleRightD' :: {s:Node1_3 | WAVL.notEmptyTree (right (left s)) && IsNode2_1 (left s) } -> {t':Tick ({t:NEWavl | EqRk s t }) | tcost t' >= 0 } @-}
 rotateDoubleRightD' :: Tree a -> Tick (Tree a)
 rotateDoubleRightD' t = RTick.wait (rotateDoubleRightD t)
 
