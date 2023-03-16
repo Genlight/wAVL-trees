@@ -106,26 +106,20 @@ balLDel' x n l r | n <= rk l' + 2 = t
                  | n == rk l' + 3 && rk r + 1 == n && rk (right r) + 1 == rk r = RTick.wmap rotateLeftD t
                  | n == rk l' + 3 && rk r + 1 == n && rk (right r) + 2 == rk r && rk (left r) + 1 == rk r = RTick.wmap rotateDoubleLeftD t
                    where
-                     t  | tcost l == 0 = pure (Tree x n l'' r)
-                        | otherwise = RTick.waitN (tcost l) (Tree x n l'' r)
-                     l' = tvalW l
-                     l'' = tval l
+                     t  | tcost l == 0 = pure (Tree x n l' r)
+                        | otherwise = RTick.waitN (tcost l) (Tree x n l' r)
+                     l' = tval l
 
 {-@ balRDel' :: a -> n:NodeRank -> {l:MaybeWavlNode' | Is2ChildN n l} -> {r:Tick ({r':Wavl' | Is3ChildN n r'}) | tcost r >= 0 } -> {t': Tick ({t:NEWavl' | (rk t == n || rk t + 1 == n) }) | tcost t' >= 0 } @-}
 balRDel' :: a -> Int -> Tree a -> Tick (Tree a) -> Tick (Tree a)
 balRDel' x 0 Nil (Tick _ Nil) = pure (singleton x)
 balRDel' x 1 Nil (Tick _ Nil) = pure (singleton x)
-balRDel' x n l r  | n < (rk (right (tval t)) + 3) = t
+balRDel' x n l r  | n <  rk r' + 3 = t
                   | n == rk r' + 3 && rk l + 2 == n = RTick.wmap WAVL.demoteR t 
                   | n == rk r' + 3 && rk l + 1 == n && rk (left l) + 2 == rk l && rk (right l) + 2 == rk l =RTick.wmap WAVL.doubleDemoteR t
                   | n == rk r' + 3 && rk l + 1 == n && rk (left l) + 1 == rk l = RTick.wmap WAVL.rotateRightD t
                   | n == rk r' + 3 && rk l + 1 == n && rk (left l) + 2 == rk l && rk (right l) + 1 == rk l = RTick.wmap WAVL.rotateDoubleRightD t
                   where 
-                    t | tcost r == 0 =  pure (Tree x n l r'') 
-                      | otherwise = RTick.waitN (tcost r) (Tree x n l r'') 
-                    r' = tvalW r
-                    r'' = tval r
-
-{-@ tvalW :: v:Tick (v':Wavl') -> {t:Wavl' | tval v == t} @-}
-tvalW :: Tick (Tree a) -> Tree a
-tvalW t = tval t
+                    t | tcost r == 0 =  pure (Tree x n l r') 
+                      | otherwise = RTick.waitN (tcost r) (Tree x n l r') 
+                    r' = tval r
