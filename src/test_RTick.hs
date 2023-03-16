@@ -126,3 +126,8 @@ visitAll (Tree x n l r) = Tree <$> (RTick.go x) <*> (pure n) <*> (visitAll l) <*
 -- {-@ tree' :: x:a -> n:NodeRank -> {l:MaybeWavlNode | Is2ChildN n l} -> {r:Wavl | Is3ChildN n r} -> {t:NEAlmostWavl | (((rk r) + 3 <= n) || (balanced t)) && rk t == n && left t == l && right t == r && val t == x} @-}
 tree' :: a -> Int -> Tree a -> Tree a -> Tree a
 tree' x n l r = Tree x n l r 
+
+-- copied from PotentialAnalysis_WAVL.hs, on the 16.03
+-- {-@ tree :: x:a -> n:NodeRank -> {l:MaybeWavlNode' | rk l < n && n <= rk l + 2 } -> {r:Wavl' | rk r < n && n <= rk r + 3 } -> {t:NEAlmostWavl' | WAVL.rk t == n && WAVL.left t == l && WAVL.right t == r && WAVL.val t == x} @-}
+-- tree :: a -> Int -> Tree a -> Tree a -> Tree a
+-- tree x n l r = Tree x n l r 
