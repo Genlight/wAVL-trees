@@ -69,12 +69,12 @@ balanced t@(Tree _ n l r) = rk r < n && n <= rk r + 2
 
 -- alternative balance definition, using an enumeration of all allowed Node states 
 -- instead of ranges for ranks
-{-@ measure balanced' @-}
-balanced' :: Tree a -> Bool
-balanced' Nil = True
-balanced' t@(Tree _ n l r) = isWavlNode t
-  && (balanced' l)
-  && (balanced' r)
+-- {-@ measure balanced' @-}
+-- balanced' :: Tree a -> Bool
+-- balanced' Nil = True
+-- balanced' t@(Tree _ n l r) = isWavlNode t
+--   && (balanced' l)
+--   && (balanced' r)
 
 {-@ measure isWavlNode @-}  
 isWavlNode :: Tree a -> Bool
