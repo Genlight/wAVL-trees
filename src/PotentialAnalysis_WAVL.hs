@@ -107,7 +107,7 @@ balLDel' x n l r | n <= rk l' + 2 = t
                  | n == rk l' + 3 && rk r + 1 == n && rk (right r) + 2 == rk r && rk (left r) + 1 == rk r = t >>= rotateDoubleLeftD'
                    where
                      t  | tcost l == 0 = pure (Tree x n l'' r)
-                        | otherwise = RTick.goN (tcost l) (Tree x n l'' r)
+                        | otherwise = RTick.waitN (tcost l) (Tree x n l'' r)
                      l' = tvalW l
                      l'' = tval l
 
@@ -122,7 +122,7 @@ balRDel' x n l r  | n < (rk (right (tval t)) + 3) = t
                   | n == rk r' + 3 && rk l + 1 == n && rk (left l) + 2 == rk l && rk (right l) + 1 == rk l = t >>= rotateDoubleRightD'
                   where 
                     t | tcost r == 0 =  pure (Tree x n l r'') 
-                      | otherwise = RTick.goN (tcost r) (Tree x n l r'') 
+                      | otherwise = RTick.waitN (tcost r) (Tree x n l r'') 
                     r' = tvalW r
                     r'' = tval r
 
