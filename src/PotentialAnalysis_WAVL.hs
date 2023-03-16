@@ -1,7 +1,7 @@
 {-@ LIQUID "--short-names" @-}
 {-@ LIQUID "--reflection" @-}
 {-@ LIQUID "--ple" @-}
--- {-@ LIQUID "--ple-with-undecided-guards" @-}
+{-@ LIQUID "--bscope" @-}
 
 module PotentialAnalysis_WAVL  where
 
@@ -25,9 +25,9 @@ potT Nil      = 0
 potT t@(Tree _ n l r) 
   | 0 == n              = potT l + potT r    -- Leaf-Node
   | rk l == rk r && rk l + 2 == n = 1 + potT l + potT r        -- 2,2-Node
-  | rk l + 3 == n && rk r + 2 == n    = 1 + potT l + potT r    -- 2,3-Node
-  | rk r + 3 == n && rk l + 2 == n    = 1 + potT l + potT r    -- 3,2-Node
-  | otherwise = potT l + potT r
+  -- | rk l + 3 == n && rk r + 2 == n    = 1 + potT l + potT r    -- 2,3-Node, not possible, since only Wavl' are allowed
+  -- | rk r + 3 == n && rk l + 2 == n    = 1 + potT l + potT r    -- 3,2-Node, not possible, since only Wavl' are allowed
+  | otherwise = potT l + potT r                                -- 1,*-Nodes
 
 {-|
     THEOREM 4.1. In a wavl tree with bottom-up rebalancing, there are at most d demote
@@ -37,13 +37,12 @@ potT t@(Tree _ n l r)
     -> only at a 2,2- or 1,2-node can a 3-child be created and thus leading to a chain of demote steps
 |-}
 
-
 -- don't know if we need this here, probably redundant, bc we want to say that amortized costs of all demote steps are equal to deletions n
 -- WavlD a n, where n is the total count for all the deletions applied on the tree
 -- {-@ type WavlD n = {t:Wavl | n >= 0 } @-}
 
 -- Deletion functions
-{-@ delete' :: _ -> s:Wavl' -> {t':Tick ({t:Wavl' | (EqRk s t) || (RkDiff s t 1) }) | tcost t' >= 0 } @-}
+{-@ delete' :: a -> s:Wavl' -> {t':Tick ({t:Wavl' | ((EqRk s t) || (RkDiff s t 1)) }) | tcost t' >= 0 } @-}
 delete' :: (Ord a) => a -> Tree a -> Tick (Tree a)
 delete' _ Nil = pure Nil
 delete' y (Tree x n l@Nil r@Nil)
@@ -113,10 +112,16 @@ balRDel' :: a -> Int -> Tree a -> Tick (Tree a) -> Tick (Tree a)
 balRDel' x 0 Nil r@(Tick _ Nil) = RTick.step (tcost r) (pure (singleton x))
 balRDel' x 1 Nil r@(Tick _ Nil) = RTick.step (tcost r) (pure (singleton x))
 balRDel' x n l r  | n <  rk r' + 3 = t
-                  | n == rk r' + 3 && rk l + 2 == n = RTick.fmap WAVL.demoteR t -- amort. cost 0
-                  | n == rk r' + 3 && rk l + 1 == n && rk (left l) + 2 == rk l && rk (right l) + 2 == rk l = RTick.fmap WAVL.doubleDemoteR t -- same
-                  | n == rk r' + 3 && rk l + 1 == n && rk (left l) + 1 == rk l = RTick.wmap WAVL.rotateRightD t -- +1
-                  | n == rk r' + 3 && rk l + 1 == n && rk (left l) + 2 == rk l && rk (right l) + 1 == rk l = RTick.wmap WAVL.rotateDoubleRightD t -- +1
+                  | n == rk r' + 3 && rk l + 2 == n = RTick.fmap demoteR t -- amort. cost 0
+                  | n == rk r' + 3 && rk l + 1 == n && rk (left l) + 2 == rk l && rk (right l) + 2 == rk l = RTick.fmap doubleDemoteR t -- same
+                  | n == rk r' + 3 && rk l + 1 == n && rk (left l) + 1 == rk l = RTick.wmap rotateRightD t -- +1
+                  | n == rk r' + 3 && rk l + 1 == n && rk (left l) + 2 == rk l && rk (right l) + 1 == rk l = RTick.wmap rotateDoubleRightD t -- +1
                   where 
                     t = RTick.step (tcost r) (pure (Tree x n l r')) 
                     r' = tval r
+
+
+-- Proof of theorem 4.3: 
+-- {-@ theorem4_3 :: x:a -> t:Wavl' -> { tcost (delete' x t) <= potT t + 1 } @-}
+-- theorem4_3 x t@Nil = () *** QED
+-- theorem4_3 x t@(Tree _ _ l r) = () *** QED
