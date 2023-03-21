@@ -19,16 +19,16 @@ import Language.Haskell.Liquid.ProofCombinators
 import Language.Haskell.Liquid.RTick as RTick
 import Prelude hiding (pure)
 
--- {-@ reflect demoteL @-}
--- {-@ reflect demoteR @-}
--- {-@ reflect doubleDemoteL @-}
--- {-@ reflect doubleDemoteR @-}
--- {-@ reflect rotateDoubleLeftD @-}
--- {-@ reflect rotateDoubleRightD @-}
--- {-@ reflect rotateRightD @-}
--- {-@ reflect rotateLeftD @-}
--- {-@ reflect singleton @-}
--- {-@ reflect nil @-}
+{-@ reflect demoteL @-}
+{-@ reflect demoteR @-}
+{-@ reflect doubleDemoteL @-}
+{-@ reflect doubleDemoteR @-}
+{-@ reflect rotateDoubleLeftD @-}
+{-@ reflect rotateDoubleRightD @-}
+{-@ reflect rotateRightD @-}
+{-@ reflect rotateLeftD @-}
+{-@ reflect singleton @-}
+{-@ reflect nil @-}
 
 -- Basic functions
 {-@ data Tree [rk] a = Nil | Tree { val :: a, 
@@ -213,7 +213,7 @@ idWavl t = t
 --       l' = delete x l
 --       r' = delete x r
       
--- Deletion functions
+-- Deletion functions, but with cases for Tree expanded
 {-@ delete :: (Ord a) => a -> s:Wavl -> {t:Wavl | (EqRk s t) || (RkDiff s t 1)} @-}
 delete _ Nil = nil
 delete y (Tree x n l@Nil r@Nil)
