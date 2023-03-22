@@ -68,3 +68,9 @@ ndmitchell.haskell-ghcid
 ```
 
 How to install extensions is explained [here](https://code.visualstudio.com/docs/editor/extension-marketplace)
+
+## Updating LiquidHaskell to v0.9.0.2
+
+In one of my debugging session I tested the hypothesis that LH needs to be updated to the newest (experimental) version at that time. That was v0.9.0.2. 
+
+To load this GHC plugin into my stack environment I only changed the repo commit ID's of LH and liquid-fixpoint to the respective newer versions and also changed the lts-resolver to the newer GHC version. In all, the changes that mattered were in stack.yaml, s. commit [628b453](https://github.com/Genlight/lhTest/commit/628b453883cad5e58168569d19c304040a512b2d).
