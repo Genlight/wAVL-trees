@@ -16,8 +16,6 @@ module WAVL (Tree (..), singleton,
  ) where
 
 import Language.Haskell.Liquid.ProofCombinators
-import Language.Haskell.Liquid.RTick as RTick
-import Prelude hiding (pure)
 
 {-@ reflect demoteL @-}
 {-@ reflect demoteR @-}

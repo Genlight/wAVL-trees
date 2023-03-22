@@ -11,6 +11,12 @@ import WAVL
 import Language.Haskell.Liquid.ProofCombinators
 import Language.Haskell.Liquid.RTick as RTick
 
+{-@ reflect delete' @-}
+{-@ reflect merge' @-}
+{-@ reflect getMin' @-}
+{-@ reflect balRDel' @-}
+{-@ reflect balLDel' @-}
+
 {-@ type Wavl' = {v:Tree a | WAVL.balanced v } @-}
 {-@ type NEWavl' = {v:Wavl' | WAVL.notEmptyTree v } @-}
 {-@ type MaybeWavlNode' = {v:Wavl' | (not (WAVL.notEmptyTree v) || IsWavlNode v) } @-}
@@ -45,7 +51,6 @@ potT2 t@(Tree _ n l r)
 |-}
 
 -- Deletion functions
-{-@ reflect delete' @-}
 {-@ delete' :: a -> s:Wavl' -> {t':Tick ({t:Wavl' | ((EqRk s t) || (RkDiff s t 1)) }) | tcost t' >= 0 } @-}
 delete' :: (Ord a) => a -> Tree a -> Tick (Tree a)
 delete' _ Nil = pure Nil
@@ -78,7 +83,6 @@ delete' y (Tree x n l@(Tree _ _ _ _) r@(Tree _ _ _ _))
       l' = delete' x l
       r' = delete' x r
 
-{-@ reflect merge' @-}
 {-@ merge' :: a -> l:Wavl' -> r:Wavl' -> {v:NodeRank | WavlRankN v l r } -> {t':Tick ({t:Wavl' | EqRkN v t || RkDiffN v t 1 }) | tcost t' >= 0 } @-}
 merge' :: a -> Tree a -> Tree a -> Int -> Tick (Tree a)
 merge' _ Nil Nil _ = pure Nil
@@ -88,7 +92,6 @@ merge' x l r n    = balRDel' y n l r'
   where
    (r', y)     = getMin' r
 
-{-@ reflect getMin' @-}
 {-@  getMin' :: v:NEWavl' -> ({t':Tick ({t:Wavl' | (EqRk v t) || (RkDiff v t 1) }) | tcost t' >= 0 }, _) @-} 
 getMin' :: Tree a -> (Tick (Tree a), a)
 getMin' (Tree x 0 Nil Nil) = (pure Nil, x)
@@ -100,7 +103,6 @@ getMin' (Tree x n l@(Tree _ _ _ _) r) = ((balLDel' x n l' r), x')
   where
     (l', x')             = getMin' l
 
-{-@ reflect balLDel' @-}
 {-@ balLDel' :: a -> n:NodeRank -> {l:Tick ({l':Wavl' | Is3ChildN n l'}) | tcost l >= 0 } -> {r':MaybeWavlNode' | Is2ChildN n r'} -> {t':Tick ({t:NEWavl' | (rk t == n || rk t + 1 == n) }) | tcost t' >= 0 && (tcost t' == tcost l || tcost t' == tcost l + 1) } @-}
 balLDel' :: a -> Int -> Tick (Tree a) -> Tree a -> Tick (Tree a)
 balLDel' x 0 l@(Tick _ Nil) Nil  = RTick.step (tcost l) (pure (singleton x))
@@ -115,7 +117,6 @@ balLDel' x n l r | n <= rk l' + 2 = t
                     t = RTick.step (tcost l) (pure (Tree x n l' r))
                     l' = tval l
 
-{-@ reflect balRDel' @-}
 {-@ balRDel' :: a -> n:NodeRank -> {l:MaybeWavlNode' | Is2ChildN n l} -> {r:Tick ({r':Wavl' | Is3ChildN n r'}) | tcost r >= 0 } -> {t': Tick ({t:NEWavl' | (rk t == n || rk t + 1 == n) }) | tcost t' >= 0 && (tcost t' == tcost r || tcost t' == tcost r + 1) } @-}
 balRDel' :: a -> Int -> Tree a -> Tick (Tree a) -> Tick (Tree a)
 balRDel' x 0 Nil r@(Tick _ Nil) = RTick.step (tcost r) (pure (singleton x))
