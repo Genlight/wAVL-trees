@@ -3,10 +3,14 @@
 {-@ LIQUID "--ple" @-}
 {-@ LIQUID "--bscope" @-}
 
-module Test_Rtick where
+module Test_Reflection where
 
-import Prelude hiding (pure, ap, (<*>))
+import Prelude hiding (pure)
 import Language.Haskell.Liquid.RTick as RTick
+
+{-@ reflect rotateDoubleRightD @-}
+{-@ reflect singleton @-}
+{-@ reflect nil @-}
 
 {-@ data Tree [rk] a = Nil | Tree { val :: a, 
                                     rd :: {v:Int | v >= 0 }, 
@@ -73,6 +77,7 @@ data Tree a = Nil | Tree { val :: a, rd :: Int, left :: (Tree a), right :: (Tree
 {-@ predicate Child2 N T = rk T + 2 == N @-}
 {-@ predicate Child1 N T = rk T + 1 == N @-}
 
+
 {-@ measure rk @-}
 {-@ rk :: t:Tree a -> {v:Rank | (not (notEmptyTree t) || v >= 0) && (notEmptyTree t || v== (-1))} @-}
 rk :: Tree a -> Int
@@ -97,42 +102,25 @@ notEmptyTree :: Tree a -> Bool
 notEmptyTree Nil = False
 notEmptyTree _ = True
 
--- this is valid, but uses a workaround by declaring a another Tree b, which i check to be equal to r' and then don't use b
-{-@ tickWrapper :: x:a -> {n:Int | n >= 0} -> l:Tree a -> r:Tick ({r':Tree a |  tval r == r'}) -> {t:Tick ({t':Tree a | val t' == x && rk t' == n && left t' == l && tval r == right t'}) | tcost t == tcost r } @-}
-tickWrapper :: a -> Int -> Tree a -> Tick (Tree a) -> Tick (Tree a)
-tickWrapper x n l  r = (pure tree) `ap` (pure x) `ap` (pure n) `ap` (pure l) `ap` r
+{-@ measure ht @-}
+{-@ ht :: Tree a -> Rank @-}
+ht              :: Tree a -> Int
+ht Nil          = (-1)
+ht (Tree x n l r) = if (ht l) > (ht r) then (1 + ht l) else (1 + ht r)
 
-{-@ tree :: x:a -> {n:Int | n >= 0} -> l:Tree a -> r:Tree a -> {t:Tree a | rk t == n && left t == l && right t == r && val t == x} @-}
-tree :: a -> Int -> Tree a -> Tree a -> Tree a
-tree x n l r = Tree x n l r 
+{-@ measure empty @-}
+empty :: Tree a -> Bool
+empty Nil = True
+empty _ = False
 
--- Defined in RTick library that can open the Tick
-exact :: Tick a -> Tick a
-{-@ exact :: t:Tick a -> {to:Tick ({v: a | v == (tval t)})| to = t} @-}
-exact (Tick c v) = Tick c v 
+{-@ singleton :: a -> {v:NEWavl | ht v == 0 && rk v == 0 } @-}
+singleton a = Tree a 0 Nil Nil
 
-{-@ exactWAVL :: v:Tick (v':Wavl) -> {t:Tick {t':Wavl | tval t == t'} | tval v == tval t} @-}
-exactWAVL :: Tick (Tree a) -> Tick (Tree a)
-exactWAVL t = exact t
+{-@ rotateDoubleRightD :: {s:Node1_3 | IsNode2_1 (left s) } -> {t:NEWavl | EqRk s t } @-}
+rotateDoubleRightD :: Tree a -> Tree a
+rotateDoubleRightD (Tree x n (Tree y m ll (Tree z o lrl lrr)) r) = Tree z (o+2) (Tree y (m-1) ll lrl) (Tree x (n-2) lrr r)
 
--- {-@ useTW :: x:a -> {n:Int | n >= 0 } -> l:Tree a -> r:Tick (r':Tree a) -> {t:Tick ({t':Tree a | val t' == x && rk t' == n && left t' == l }) | tcost t == tcost r } @-}
--- useTW :: a -> Int -> Tree a -> Tick (Tree a) -> Tick (Tree a)
--- useTW x n l tt = tickWrapper x n l (tval tt) (exact tt)
-
-{-@ type WavlTick T = {t':Tick ({t:Tree a | t = T}) | balanced T} @-}
--- {-@ visitAll :: v:Wavl -> t:WavlTick ({t':Tree a | t' = v}) @-}
-{-@ visitAll :: v:Wavl -> t:WavlTick v @-}
-visitAll :: Tree a -> Tick (Tree a)
-visitAll Nil = RTick.return Nil
-visitAll (Tree x n l r) = Tree <$> (RTick.wait x) <*> (pure n) <*> (visitAll l) <*> (visitAll r)
-
-{-@ reflect tree' @-}
-{-@ tree' :: x:a -> n:NodeRank -> {l:MaybeWavlNode | Is2ChildN n l} -> {r:Wavl | Is3ChildN n r} -> {t:NEAlmostWavl | rk t == n && left t == l && right t == r && val t == x} @-}
--- {-@ tree' :: x:a -> n:NodeRank -> {l:MaybeWavlNode | Is2ChildN n l} -> {r:Wavl | Is3ChildN n r} -> {t:NEAlmostWavl | (((rk r) + 3 <= n) || (balanced t)) && rk t == n && left t == l && right t == r && val t == x} @-}
-tree' :: a -> Int -> Tree a -> Tree a -> Tree a
-tree' x n l r = Tree x n l r 
-
--- copied from PotentialAnalysis_WAVL.hs, on the 16.03
--- {-@ tree :: x:a -> n:NodeRank -> {l:MaybeWavlNode' | rk l < n && n <= rk l + 2 } -> {r:Wavl' | rk r < n && n <= rk r + 3 } -> {t:NEAlmostWavl' | WAVL.rk t == n && WAVL.left t == l && WAVL.right t == r && WAVL.val t == x} @-}
--- tree :: a -> Int -> Tree a -> Tree a -> Tree a
--- tree x n l r = Tree x n l r 
+-- under test:
+{-@ reflect refl @-}
+{-@ refl :: v:Tick {s:Node1_3 | IsNode2_1 (left s) } -> {t':Tick (Tree a) | tcost t' == tcost v + 1} @-}
+refl t = RTick.wmap rotateDoubleRightD t
