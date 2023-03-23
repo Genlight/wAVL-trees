@@ -128,3 +128,4 @@ refl t = RTick.wmap rotateDoubleRightD t
 {-@ type WTick T = {v:Tick ({v':Tree a | v = T}) | (notEmptyTree (tval v)) || (tcost v == 0)} @-}
 
 {-@ type ETick = WTick ({v:NEWavl | rk v >= 3}) @-}
+{-@ type ATick = WTick ({v:NEWavl | rk v >= 2}) @-}
