@@ -124,3 +124,7 @@ rotateDoubleRightD (Tree x n (Tree y m ll (Tree z o lrl lrr)) r) = Tree z (o+2) 
 {-@ reflect refl @-}
 {-@ refl :: v:Tick {s:Node1_3 | IsNode2_1 (left s) } -> {t':Tick (Tree a) | tcost t' == tcost v + 1} @-}
 refl t = RTick.wmap rotateDoubleRightD t
+
+{-@ type WTick T = {v:Tick ({v':Tree a | v = T}) | (notEmptyTree (tval v)) || (tcost v == 0)} @-}
+
+{-@ type ETick = WTick ({v:NEWavl | rk v >= 3}) @-}
