@@ -119,8 +119,8 @@ balLDel' :: a -> Int -> Tick (Tree a) -> Tree a -> Tick (Tree a)
 balLDel' x 0 l@(Tick _ Nil) Nil  = RTick.step (tcost l) (pure (singleton x))
 balLDel' x 1 l@(Tick _ Nil) Nil  = RTick.step (tcost l) (pure (singleton x))
 balLDel' x n l r | n <= rk l' + 2 = t
-                 | n == rk l' + 3 && rk r + 2 == n = RTick.fmap demoteL' t -- amort. cost 0
-                 | n == rk l' + 3 && rk r + 1 == n && rk (left r) + 2 == rk r && (rk (right r)) + 2 == rk r = RTick.fmap doubleDemoteL' t --same 
+                 | n == rk l' + 3 && rk r + 2 == n = RTick.wmap demoteL' t -- amort. cost 0
+                 | n == rk l' + 3 && rk r + 1 == n && rk (left r) + 2 == rk r && (rk (right r)) + 2 == rk r = RTick.wmap doubleDemoteL' t --same 
                  | n == rk l' + 3 && rk r + 1 == n && rk (right r) + 1 == rk r = RTick.wmap rotateLeftD' t -- +1
                  | n == rk l' + 3 && rk r + 1 == n && rk (right r) + 2 == rk r && rk (left r) + 1 == rk r = RTick.wmap rotateDoubleLeftD' t -- +1
                  | otherwise = RTick.step (tcost l) (pure (singleton x))
@@ -155,15 +155,15 @@ doubleDemoteL' (Tree x n l (Tree y m rl rr)) = (Tree x (n-1) l (Tree x (m-1) rl 
 
 {-@ reflect rotateLeftD' @-}
 {-@ rotateLeftD' :: {s:Node3_1 | Child1 (rk (right s)) (right (right s)) 
-          && (potT (left s)) + (potT (left (right s))) + (potT (right (right s))) == potT2 s} 
-          -> {t:NEWavl | EqRk s t && potT2 s <= potT2 t || potT2 s + 1 <= potT2 t } @-} 
+          && (potT (left s)) + (potT (right s)) == potT2 s} 
+          -> {t:NEWavl | EqRk s t && (potT2 s == potT2 t || potT2 s + 1 == potT2 t) } @-} 
 rotateLeftD' t@(Tree z n l@Nil (Tree y m rl@Nil rr)) = Tree y (m+1) (singleton z) rr
 rotateLeftD' t@(Tree z n l (Tree y m rl rr)) = Tree y (m+1) (Tree z (n-1) l rl) rr 
 
 {-@ reflect rotateDoubleLeftD' @-}
 {-@ rotateDoubleLeftD' :: {s:Node3_1 | IsNode1_2 (right s) 
-          && (potT (left s)) + (potT (left (left (right s)))) + (potT (right (left (right s)))) + (potT (right (right s))) == potT2 s } 
-          -> {t:NEWavl | EqRk s t && potT2 s <= potT2 t } @-} -- || potT2 s <= potT2 t
+          && (potT (left s)) + (potT (right s)) == potT2 s } 
+          -> {t:NEWavl | EqRk s t && (potT2 s == potT2 t || potT2 s + 1 == potT2 t) } @-} 
 rotateDoubleLeftD' :: Tree a -> Tree a
 rotateDoubleLeftD' (Tree z n l (Tree y m (Tree x o rll rlr) rr)) = Tree x n (Tree z (n-2) l rll) (Tree y (n-2) rlr rr)
 
@@ -180,15 +180,15 @@ doubleDemoteR' (Tree x n (Tree y m ll lr) r) = Tree x (n-1) (Tree y (m-1) ll lr)
 
 {-@ reflect rotateRightD' @-}
 {-@ rotateRightD' :: {s:Node1_3 | Child1 (rk (left s)) (left (left s))  
-          && (potT (left (left s))) + (potT (right (left s))) + (potT (right s)) == potT2 s} 
-          -> {t:NEWavl | EqRk s t && potT2 s <= potT2 t } @-} -- || potT2 s + 1 <= potT2 t
+          && (potT (left s)) + (potT (right s)) == potT2 s} 
+          -> {t:NEWavl | EqRk s t && (potT2 s == potT2 t || potT2 s + 1 == potT2 t) } @-}
 rotateRightD' :: Tree a -> Tree a
 rotateRightD' (Tree x n (Tree y m ll Nil) Nil) = Tree y (m+1) ll (singleton x)
 rotateRightD' (Tree x n (Tree y m ll lr) r) = Tree y (m+1) ll (Tree x (n-1) lr r) 
 
 {-@ reflect rotateDoubleRightD' @-}
-{-@ rotateDoubleRightD' :: {s:Node1_3 | IsNode2_1 (left s) && (potT (right s)) + (potT (left (left s))) + (potT (left (right (left s)))) + (potT (right (right (left s)))) == potT2 s }
-          -> {t:NEWavl | EqRk s t && potT2 s <= potT2 t } @-}
+{-@ rotateDoubleRightD' :: {s:Node1_3 | IsNode2_1 (left s) && (potT (left s)) + (potT (right s)) == potT2 s }
+          -> {t:NEWavl | EqRk s t && (potT2 s == potT2 t || potT2 s + 1 == potT2 t) } @-}
 rotateDoubleRightD' :: Tree a -> Tree a
 rotateDoubleRightD' (Tree x n (Tree y m ll (Tree z o lrl lrr)) r) = Tree z (o+2) (Tree y (m-1) ll lrl) (Tree x (n-2) lrr r)
 
