@@ -11,7 +11,7 @@ homepage:       https://github.com/Genlight/lhTest#readme
 bug-reports:    https://github.com/Genlight/lhTest/issues
 author:         Genlight
 maintainer:     genlight@heartgaming.at
-copyright:      2022 Genlight
+copyright:      2023 Genlight
 license:        BSD3
 license-file:   LICENSE
 build-type:     Simple
