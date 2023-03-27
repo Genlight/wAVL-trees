@@ -17,14 +17,6 @@ module WAVL (Tree (..), singleton,
 
 import Language.Haskell.Liquid.ProofCombinators
 
-{-@ reflect demoteL @-}
-{-@ reflect demoteR @-}
-{-@ reflect doubleDemoteL @-}
-{-@ reflect doubleDemoteR @-}
-{-@ reflect rotateDoubleLeftD @-}
-{-@ reflect rotateDoubleRightD @-}
-{-@ reflect rotateRightD @-}
-{-@ reflect rotateLeftD @-}
 {-@ reflect singleton @-}
 {-@ reflect nil @-}
 
@@ -286,11 +278,11 @@ balRDel x n l r | n < (rk r + 3) = t
 
 -- potential analysis for deletion
 {-@ measure potT @-}
-{-@ potT :: t:Wavl -> Int @-}
+{-@ potT :: t:Wavl -> {n:Int | potT2 t == n } @-}
 potT :: Tree a -> Int
 potT Nil      = 0
 potT t@(Tree _ n l r) 
-  | rk l == rk r && rk l + 2 == n = 1 + potT l + potT r        -- 2,2-Node
+  | rk r + 2 == n && rk l + 2 == n = 1 + potT l + potT r        -- 2,2-Node
   | otherwise = potT l + potT r                                -- 1,*-Nodes
 
 {-@ measure potT2 @-}
@@ -312,14 +304,14 @@ doubleDemoteL :: Tree a -> Tree a
 doubleDemoteL (Tree x n l (Tree y m rl rr)) = (Tree x (n-1) l (Tree x (m-1) rl rr))
 
 {-@ rotateLeftD :: {s:Node3_1 | Child1 (rk (right s)) (right (right s)) 
-          && (potT (left s)) + (potT (left (right s))) + (potT (right (right s))) == potT2 s} 
-          -> {t:NEWavl | EqRk s t && potT2 s <= potT2 t || potT2 s + 1 <= potT2 t } @-} 
+          && (potT (left s)) + (potT (right s)) == potT2 s} 
+          -> {t:NEWavl | EqRk s t && (potT2 s == potT2 t || potT2 s + 1 == potT2 t) } @-} 
 rotateLeftD t@(Tree z n l@Nil (Tree y m rl@Nil rr)) = Tree y (m+1) (singleton z) rr
 rotateLeftD t@(Tree z n l (Tree y m rl rr)) = Tree y (m+1) (Tree z (n-1) l rl) rr 
 
 {-@ rotateDoubleLeftD :: {s:Node3_1 | IsNode1_2 (right s) 
-          && (potT (left s)) + (potT (left (left (right s)))) + (potT (right (left (right s)))) + (potT (right (right s))) == potT2 s } 
-          -> {t:NEWavl | EqRk s t && potT2 s <= potT2 t } @-} -- || potT2 s <= potT2 t
+          && (potT (left s)) + (potT (right s)) == potT2 s } 
+          -> {t:NEWavl | EqRk s t && potT2 s <= potT2 t } @-}
 rotateDoubleLeftD :: Tree a -> Tree a
 rotateDoubleLeftD (Tree z n l (Tree y m (Tree x o rll rlr) rr)) = Tree x n (Tree z (n-2) l rll) (Tree y (n-2) rlr rr)
 
@@ -332,19 +324,20 @@ demoteR (Tree a n l r) = Tree a (n - 1) l r
 doubleDemoteR :: Tree a -> Tree a
 doubleDemoteR (Tree x n (Tree y m ll lr) r) = Tree x (n-1) (Tree y (m-1) ll lr) r 
 
+-- {-@ reflect rotateRightD @-}
 {-@ rotateRightD :: {s:Node1_3 | Child1 (rk (left s)) (left (left s))  
-          && (potT (left (left s))) + (potT (right (left s))) + (potT (right s)) == potT2 s} 
-          -> {t:NEWavl | EqRk s t && potT2 s <= potT2 t } @-} -- || potT2 s + 1 <= potT2 t
+          && (potT (left s)) + (potT (right s)) == potT2 s} 
+          -> {t:NEWavl | EqRk s t && (potT2 s == potT2 t || potT2 s + 1 == potT2 t) } @-} 
 rotateRightD :: Tree a -> Tree a
 rotateRightD (Tree x n (Tree y m ll Nil) Nil) = Tree y (m+1) ll (singleton x)
 rotateRightD (Tree x n (Tree y m ll lr) r) = Tree y (m+1) ll (Tree x (n-1) lr r) 
 
-{-@ rotateDoubleRightD :: {s:Node1_3 | IsNode2_1 (left s) && (potT (right s)) + (potT (left (left s))) + (potT (left (right (left s)))) + (potT (right (right (left s)))) == potT2 s }
+{-@ rotateDoubleRightD :: {s:Node1_3 | IsNode2_1 (left s) && (potT (right s)) + (potT  (left s)) == potT2 s }
           -> {t:NEWavl | EqRk s t && potT2 s <= potT2 t } @-}
 rotateDoubleRightD :: Tree a -> Tree a
 rotateDoubleRightD (Tree x n (Tree y m ll (Tree z o lrl lrr)) r) = Tree z (o+2) (Tree y (m-1) ll lrl) (Tree x (n-2) lrr r)
 
-{-| Theorem 
+{-| Theorem 3.1
   what we want to proof:
   - Height of a given Tree t is a logarithmic upper bound
 |-}

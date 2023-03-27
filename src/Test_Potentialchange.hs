@@ -1,13 +1,13 @@
 {-@ LIQUID "--short-names" @-}
 {-@ LIQUID "--reflection" @-}
 {-@ LIQUID "--ple" @-}
+{-@ LIQUID "--bscope" @-}
 
 module Test_Potentialchange where
 
 import Prelude hiding (pure)
 import Language.Haskell.Liquid.RTick as RTick
 
-{-@ reflect rotateDoubleRightD @-}
 {-@ reflect singleton @-}
 {-@ reflect nil @-}
 
@@ -142,14 +142,14 @@ doubleDemoteL :: Tree a -> Tree a
 doubleDemoteL (Tree x n l (Tree y m rl rr)) = (Tree x (n-1) l (Tree x (m-1) rl rr))
 
 {-@ rotateLeftD :: {s:Node3_1 | Child1 (rk (right s)) (right (right s)) 
-          && (potT (left s)) + (potT (left (right s))) + (potT (right (right s))) == potT2 s} 
-          -> {t:NEWavl | EqRk s t && potT2 s <= potT2 t || potT2 s + 1 <= potT2 t } @-} 
+          && (potT (left s)) + (potT (right s)) == potT2 s} 
+          -> {t:NEWavl | EqRk s t && (potT2 s == potT2 t || potT2 s + 1 == potT2 t) } @-} 
 rotateLeftD t@(Tree z n l@Nil (Tree y m rl@Nil rr)) = Tree y (m+1) (singleton z) rr
 rotateLeftD t@(Tree z n l (Tree y m rl rr)) = Tree y (m+1) (Tree z (n-1) l rl) rr 
 
 {-@ rotateDoubleLeftD :: {s:Node3_1 | IsNode1_2 (right s) 
-          && (potT (left s)) + (potT (left (left (right s)))) + (potT (right (left (right s)))) + (potT (right (right s))) == potT2 s } 
-          -> {t:NEWavl | EqRk s t && potT2 s <= potT2 t } @-} -- || potT2 s <= potT2 t
+          && (potT (left s)) + (potT (right s)) == potT2 s } 
+          -> {t:NEWavl | EqRk s t && potT2 s <= potT2 t } @-}
 rotateDoubleLeftD :: Tree a -> Tree a
 rotateDoubleLeftD (Tree z n l (Tree y m (Tree x o rll rlr) rr)) = Tree x n (Tree z (n-2) l rll) (Tree y (n-2) rlr rr)
 
@@ -163,13 +163,29 @@ doubleDemoteR :: Tree a -> Tree a
 doubleDemoteR (Tree x n (Tree y m ll lr) r) = Tree x (n-1) (Tree y (m-1) ll lr) r 
 
 {-@ rotateRightD :: {s:Node1_3 | Child1 (rk (left s)) (left (left s))  
-          && (potT (left (left s))) + (potT (right (left s))) + (potT (right s)) == potT2 s} 
-          -> {t:NEWavl | EqRk s t && potT2 s <= potT2 t } @-} -- || potT2 s + 1 <= potT2 t
+          && (potT (left s)) + (potT (right s)) == potT2 s} 
+          -> {t:NEWavl | EqRk s t && (potT2 s == potT2 t || potT2 s + 1 == potT2 t) } @-} -- ... potT2 s == potT2 t || potT2 s + 1 == potT2 t 
 rotateRightD :: Tree a -> Tree a
 rotateRightD (Tree x n (Tree y m ll Nil) Nil) = Tree y (m+1) ll (singleton x)
 rotateRightD (Tree x n (Tree y m ll lr) r) = Tree y (m+1) ll (Tree x (n-1) lr r) 
 
-{-@ rotateDoubleRightD :: {s:Node1_3 | IsNode2_1 (left s) && (potT (right s)) + (potT (left (left s))) + (potT (left (right (left s)))) + (potT (right (right (left s)))) == potT2 s }
+{-@ rotateDoubleRightD :: {s:Node1_3 | IsNode2_1 (left s) && (potT (right s)) + (potT  (left s)) == potT2 s }
           -> {t:NEWavl | EqRk s t && potT2 s <= potT2 t } @-}
 rotateDoubleRightD :: Tree a -> Tree a
 rotateDoubleRightD (Tree x n (Tree y m ll (Tree z o lrl lrr)) r) = Tree z (o+2) (Tree y (m-1) ll lrl) (Tree x (n-2) lrr r)
+
+-- under test:
+{-@ testP :: {s:Tick ({s':Node3_1 | IsNode2_2 (right s') && tval s == s'}) | tcost s >= 0} 
+          -> {t:Tick {t':NEWavl | RkDiff (tval s) t' 1 && (potT2 t' + tcost t - tcost s) == potT2 (tval s) }
+             | tcost t == tcost s + 1}  @-}
+testP :: Tick (Tree a) -> Tick (Tree a)
+testP t = RTick.wmap doubleDemoteL t
+
+{-@ testQ :: s':Tick ({s:Node3_1 | Child1 (rk (right s)) (right (right s)) 
+          && (potT (left s)) + (potT (right s)) == potT2 s && tval s' == s}) 
+          -> {t':Tick ({t:NEWavl | EqRk (tval s') t 
+          && (potT2 (tval s') == potT2 t || potT2 (tval s') + 1 == potT2 t) 
+          && (potT2 t + tcost t' - tcost s') <= potT2 (tval s') + 2 
+          }) | tcost t' == tcost s' + 1 } @-} -- ?? it isn't 1??
+testQ :: Tick (Tree a) -> Tick (Tree a)
+testQ t = RTick.wmap rotateLeftD t
