@@ -1,9 +1,12 @@
 {-@ LIQUID "--short-names" @-}
 {-@ LIQUID "--reflection" @-}
 {-@ LIQUID "--ple" @-}
+{-@ LIQUID "--bscope" @-}
 
 module WAVL (Tree (..), singleton,
- insert, delete, rk, 
+ insert, 
+--  delete,
+  rk, 
  promoteL, promoteR, 
  demoteL, demoteR, doubleDemoteL, doubleDemoteR, 
  rotateRight, rotateLeft,
@@ -12,12 +15,19 @@ module WAVL (Tree (..), singleton,
  rotateLeftD, rotateRightD,  
  rotateDoubleLeftD, 
  rotateDoubleRightD, 
- notEmptyTree, empty
+ notEmptyTree, empty,
+ potT, potT2
  ) where
 
 import Language.Haskell.Liquid.ProofCombinators
+import Language.Haskell.Liquid.RTick as RTick
+import Prelude hiding (pure)
 
 {-@ reflect singleton @-}
+{-@ reflect rotateDoubleLeftD @-}
+{-@ reflect rotateDoubleRightD @-}
+{-@ reflect rotateRightD @-}
+{-@ reflect rotateLeftD @-}
 {-@ reflect nil @-}
 
 -- Basic functions
@@ -89,6 +99,25 @@ isWavlNode t@(Tree x n l r) =  ((rk l) + 2 == n && (rk r) + 2 == n && notEmptyTr
 {-@ singleton :: a -> {v:NEWavl | ht v == 0 && rk v == 0 } @-}
 singleton a = Tree a 0 Nil Nil
 
+-- potential analysis for deletion and insertion
+{-@ measure potT @-}
+{-@ potT :: t:Wavl -> Int @-}
+potT :: Tree a -> Int
+potT Nil      = 0
+potT t@(Tree _ n l r) 
+  | rk l == rk r && rk l + 1 == n = 1 + potT l + potT r        -- 1,1-Node
+  | otherwise = potT l + potT r                                -- 2,*-Nodes
+
+{-@ measure potT2 @-}
+{-@ potT2 :: t:AlmostWavl -> Int @-}
+potT2 :: Tree a -> Int 
+potT2 t@Nil = 0
+potT2 t@(Tree _ n l r)
+  | rk l == n && rk r + 1 == n     = 1 + potT l + potT r    -- 0,1-Node
+  | rk r == n && rk l + 1 == n     = 1 + potT l + potT r    -- 1,0-Node
+  | rk r + 1 == n && rk l + 1 == n = 1 + potT l + potT r    -- 1,1-Node
+  | otherwise = potT l + potT r
+
 -- insertion
 {-@ insert :: (Ord a) => a -> s:Wavl -> {t:NEWavl | ((RkDiff t s 1) || (RkDiff t s 0)) } @-}
 insert :: (Ord a) => a -> Tree a -> Tree a
@@ -113,27 +142,28 @@ insert x t@(Tree v n l r) = case compare x v of
              | rk r' == n && rk r' == rk l + 2 && (rk (left r') + 1) == rk r' && (rk (right r') + 2) == rk r' && n >= 1 = rotateDoubleLeft rt'
              | otherwise = t
 
-{-@ promoteL :: s:Node0_1 -> {t:Node1_2 | RkDiff t s 1 } @-}
+{-@ promoteL :: s:Node0_1 -> {t:Node1_2 | RkDiff t s 1 && potT2 s == potT t + 1} @-}
 promoteL :: Tree a -> Tree a
 promoteL (Tree a n l r) = (Tree a (n+1) l r)
 
-{-@ promoteR :: s:Node1_0 -> {t:NEWavl | RkDiff t s 1} @-}
+{-@ promoteR :: s:Node1_0 -> {t:NEWavl | RkDiff t s 1 && potT2 s == potT t + 1 } @-}
 promoteR :: Tree a -> Tree a
 promoteR (Tree a n l r) = (Tree a (n+1) l r)
 
-{-@ rotateRight :: {v:Node0_2 | IsNode1_2 (left v) } -> {t:NEWavl | EqRk v t } @-}
+{-@ rotateRight :: {v:Node0_2 | IsNode1_2 (left v) } -> {t:NEWavl | EqRk v t && potT2 v + 2 == potT t} @-}
 rotateRight :: Tree a -> Tree a
 rotateRight (Tree x n (Tree y m a b) c) = Tree y m a (Tree x (n-1) b c)
 
-{-@ rotateDoubleRight :: {v:Node0_2 | IsNode2_1 (left v) } -> {t:NEWavl | EqRk v t } @-}
+{-@ rotateDoubleRight :: {v:Node0_2 | IsNode2_1 (left v) } -> {t:NEWavl | EqRk v t && (potT2 v + 2 == potT t || potT2 v + 1 == potT t)} @-}
 rotateDoubleRight :: Tree a -> Tree a 
 rotateDoubleRight (Tree z n (Tree x m a (Tree y o b c)) d) =  Tree y (o+1) (Tree x (m-1) a b) (Tree z (n-1) c d) 
 
-{-@ rotateLeft :: {v:Node2_0 | IsNode2_1 (right v) } -> {t:NEWavl | EqRk v t } @-}
+{-@ rotateLeft :: {v:Node2_0 | IsNode2_1 (right v) } -> {t:NEWavl | EqRk v t && potT2 v + 2 == potT t} @-}
 rotateLeft :: Tree a -> Tree a
 rotateLeft t@(Tree x n a (Tree y m b c)) = Tree y m (Tree x (n-1) a b) c
 
-{-@ rotateDoubleLeft :: {v:Node2_0 | IsNode1_2 (right v) } -> {t:NEWavl | EqRk v t } @-}
+{-@ rotateDoubleLeft :: {v:Node2_0 | IsNode1_2 (right v) } 
+          -> {t:NEWavl | EqRk v t && (potT2 v + 2 == potT t || potT2 v + 1 == potT t)} @-}
 rotateDoubleLeft :: Tree a -> Tree a
 rotateDoubleLeft (Tree x n a (Tree y m (Tree z o b_1 b_2) c)) = Tree z (o+1) (Tree x (n-1) a b_1) (Tree y (m-1) b_2 c) 
 
@@ -200,140 +230,125 @@ rotateDoubleLeft (Tree x n a (Tree y m (Tree z o b_1 b_2) c)) = Tree z (o+1) (Tr
 --       r' = delete x r
       
 -- Deletion functions, but with cases for Tree expanded
-{-@ delete :: (Ord a) => a -> s:Wavl -> {t:Wavl | (EqRk s t) || (RkDiff s t 1)} @-}
-delete _ Nil = nil
-delete y (Tree x n l@Nil r@Nil)
-  | y < x     = balLDel x n l' r
-  | x < y     = balRDel x n l r'
-  | otherwise = merge y l r n 
-    where
-      l' = delete x l
-      r' = delete x r
-delete y (Tree x n l@Nil r@(Tree _ _ _ _))
-  | y < x     = balLDel x n l' r
-  | x < y     = balRDel x n l r'
-  | otherwise = merge y l r n 
-    where
-      l' = delete x l
-      r' = delete x r
-delete y (Tree x n l@(Tree _ _ _ _) r@Nil)
-  | y < x     = balLDel x n l' r
-  | x < y     = balRDel x n l r'
-  | otherwise = merge y l r n 
-    where
-      l' = delete x l
-      r' = delete x r
-delete y (Tree x n l@(Tree _ _ _ _) r@(Tree _ _ _ _))
-  | y < x     = balLDel x n l' r
-  | x < y     = balRDel x n l r'
-  | otherwise = merge y l r n 
-    where
-      l' = delete x l
-      r' = delete x r
+-- {-@ delete :: (Ord a) => a -> s:Wavl -> {t:Wavl | (EqRk s t) || (RkDiff s t 1)} @-}
+-- delete _ Nil = nil
+-- delete y (Tree x n l@Nil r@Nil)
+--   | y < x     = balLDel x n l' r
+--   | x < y     = balRDel x n l r'
+--   | otherwise = merge y l r n 
+--     where
+--       l' = delete x l
+--       r' = delete x r
+-- delete y (Tree x n l@Nil r@(Tree _ _ _ _))
+--   | y < x     = balLDel x n l' r
+--   | x < y     = balRDel x n l r'
+--   | otherwise = merge y l r n 
+--     where
+--       l' = delete x l
+--       r' = delete x r
+-- delete y (Tree x n l@(Tree _ _ _ _) r@Nil)
+--   | y < x     = balLDel x n l' r
+--   | x < y     = balRDel x n l r'
+--   | otherwise = merge y l r n 
+--     where
+--       l' = delete x l
+--       r' = delete x r
+-- delete y (Tree x n l@(Tree _ _ _ _) r@(Tree _ _ _ _))
+--   | y < x     = balLDel x n l' r
+--   | x < y     = balRDel x n l r'
+--   | otherwise = merge y l r n 
+--     where
+--       l' = delete x l
+--       r' = delete x r
 
-{-@ merge :: x:a -> l:Wavl -> r:Wavl -> {v:Rank | WavlRankN v l r && v >= 0 }  -> {t:Wavl | EqRkN v t || RkDiffN v t 1 } @-}
-merge :: a -> Tree a -> Tree a -> Int ->  Tree a
-merge _ Nil Nil _ = nil
-merge _ Nil r _  = r
-merge _ l Nil _  = l
-merge x l r n    = (balRDel y n l r')
-  where
-   (r', y)     = getMin r
+-- {-@ merge :: x:a -> l:Wavl -> r:Wavl -> {v:Rank | WavlRankN v l r && v >= 0 }  -> {t:Wavl | EqRkN v t || RkDiffN v t 1 } @-}
+-- merge :: a -> Tree a -> Tree a -> Int ->  Tree a
+-- merge _ Nil Nil _ = nil
+-- merge _ Nil r _  = r
+-- merge _ l Nil _  = l
+-- merge x l r n    = (balRDel y n l r')
+--   where
+--    (r', y)     = getMin r
 
--- get the inorder successor node 
-{-@  getMin :: v:NEWavl -> ({t:Wavl | (EqRk v t) || (RkDiff v t 1) }, a) @-} 
-getMin :: Tree a -> (Tree a, a)
-getMin (Tree x 0 Nil Nil) = (nil, x)
-getMin (Tree x 1 Nil r@(Tree _ _ _ _)) = (r, x)
-getMin (Tree x n l@(Tree _ _ _ _) r@Nil) = ((balLDel x n l' r), x')
-  where
-    (l', x')             = getMin l
-getMin (Tree x n l@(Tree _ _ _ _) r) = ((balLDel x n l' r), x')
-  where
-    (l', x')             = getMin l
+-- -- get the inorder successor node 
+-- {-@  getMin :: v:NEWavl -> ({t:Wavl | (EqRk v t) || (RkDiff v t 1) }, a) @-} 
+-- getMin :: Tree a -> (Tree a, a)
+-- getMin (Tree x 0 Nil Nil) = (nil, x)
+-- getMin (Tree x 1 Nil r@(Tree _ _ _ _)) = (r, x)
+-- getMin (Tree x n l@(Tree _ _ _ _) r@Nil) = ((balLDel x n l' r), x')
+--   where
+--     (l', x')             = getMin l
+-- getMin (Tree x n l@(Tree _ _ _ _) r) = ((balLDel x n l' r), x')
+--   where
+--     (l', x')             = getMin l
 
-{-@ balLDel :: a -> {n:Rank | n >= 0 } -> {l:Wavl | Is3ChildN n l} -> {r:MaybeWavlNode | Is2ChildN n r} -> {t:NEWavl | (rk t == n || rk t + 1 == n) }  @-}
-balLDel :: a -> Int -> Tree a -> Tree a -> Tree a
-balLDel x 0 Nil Nil  = singleton x
-balLDel x 1 Nil Nil  = singleton x
-balLDel x n l r | n <= (rk l) + 2 = t 
-                | n == (rk l) + 3 && (rk r) + 2 == n = demoteL t 
-                | n == (rk l) + 3 && (rk r) + 1 == n && rk (left r) + 2 == (rk r) && (rk (right r)) + 2 == rk r = doubleDemoteL t
-                | n == (rk l) + 3 && (rk r) + 1 == n && rk (right r) + 1 == rk r = rotateLeftD t
-                | n == (rk l) + 3 && (rk r) + 1 == n && rk (right r) + 2 == rk r && rk (left r) + 1 == rk r = rotateDoubleLeftD t
-                  where
-                    t = Tree x n l r
+-- {-@ balLDel :: x:a -> n:NodeRank -> {l:Tick ({l':Wavl | Is3ChildN n l'}) | tcost l >= 0 } -> {r':MaybeWavlNode | Is2ChildN n r'} 
+--           -> {t:Tick ({t':NEWavl | (rk t' == n || rk t' + 1 == n) && (potT2 t' + (tcost t - tcost l) <= (potT2 (Tree x n (tval l) r')) + 3) }) 
+--           | tcost t >= 0 } @-} -- TODO: change to 2??
+-- balLDel x 0 l@(Tick _ Nil) Nil  = RTick.step (tcost l) (pure (singleton x))
+-- balLDel x 1 l@(Tick _ Nil) Nil  = RTick.step (tcost l) (pure (singleton x))
+-- balLDel x n l r | n <= rk l' + 2 = t
+--                  | n == rk l' + 3 && rk r + 2 == n = RTick.wmap demoteL t -- amort. cost 0
+--                  | n == rk l' + 3 && rk r + 1 == n && rk (left r) + 2 == rk r && (rk (right r)) + 2 == rk r = RTick.wmap doubleDemoteL t --same 
+--                  | n == rk l' + 3 && rk r + 1 == n && rk (right r) + 1 == rk r = RTick.wmap rotateLeftD t -- +1
+--                  | n == rk l' + 3 && rk r + 1 == n && rk (right r) + 2 == rk r && rk (left r) + 1 == rk r = RTick.wmap rotateDoubleLeftD t -- +1
+--                  | otherwise = RTick.step (tcost l) (pure (singleton x))
+--                   where
+--                     t = RTick.step (tcost l) (pure (Tree x n l' r))
+--                     l' = tval l
 
-{-@ balRDel :: a -> n:Rank -> {l:MaybeWavlNode | Is2ChildN n l} -> {r:Wavl | Is3ChildN n r} -> {t:NEWavl | rk t == n || rk t + 1 == n } @-}
-balRDel :: a -> Int -> Tree a -> Tree a -> Tree a
-balRDel x 0 Nil Nil = singleton x
-balRDel x 1 Nil Nil = singleton x
-balRDel x n l r | n < (rk r + 3) = t
-                | n == (rk r + 3) && (rk l) + 2 == n = demoteR t
-                | n == (rk r + 3) && (rk l) + 1 == n && (rk (left l)) + 2 == rk l && (rk (right l)) + 2 == rk l = doubleDemoteR t
-                | n == (rk r + 3) && (rk l) + 1 == n && (rk (left l)) + 1 == rk l = rotateRightD t
-                | n == (rk r + 3) && (rk l) + 1 == n && (rk (left l)) + 2 == rk l && (rk (right l)) + 1 == rk l = rotateDoubleRightD t
+{-@ balRDel :: x:a -> n:NodeRank -> {l:MaybeWavlNode | Is2ChildN n l} -> {r:Tick ({r':Wavl | Is3ChildN n r'}) | tcost r >= 0 } -> {t: Tick ({t':NEWavl | (rk t' == n || rk t' + 1 == n) && (potT2 t' + (tcost t - tcost r) <= (potT2 (Tree x n l (tval r))) + 2) }) | tcost t >= 0 } @-}
+balRDel :: a -> Int -> Tree a -> Tick (Tree a) -> Tick (Tree a)
+balRDel x 0 Nil r@(Tick _ Nil) = RTick.step (tcost r) (pure (singleton x))
+balRDel x 1 Nil r@(Tick _ Nil) = RTick.step (tcost r) (pure (singleton x))
+balRDel x n l r  | n <  rk r' + 3 = t
+                  | n == rk r' + 3 && rk l + 2 == n = RTick.wmap demoteR t -- amort. cost 0
+                  | n == rk r' + 3 && rk l + 1 == n && rk (left l) + 2 == rk l && rk (right l) + 2 == rk l = RTick.wmap doubleDemoteR t -- same
+                  | n == rk r' + 3 && rk l + 1 == n && rk (left l) + 1 == rk l = RTick.wmap rotateRightD t -- +1
+                  | n == rk r' + 3 && rk l + 1 == n && rk (left l) + 2 == rk l && rk (right l) + 1 == rk l = RTick.wmap rotateDoubleRightD t -- +1
+                  -- | otherwise = t
                   where 
-                    t = Tree x n l r
-
--- potential analysis for deletion
-{-@ measure potT @-}
-{-@ potT :: t:Wavl -> {n:Int | potT2 t == n } @-}
-potT :: Tree a -> Int
-potT Nil      = 0
-potT t@(Tree _ n l r) 
-  | rk r + 2 == n && rk l + 2 == n = 1 + potT l + potT r        -- 2,2-Node
-  | otherwise = potT l + potT r                                -- 1,*-Nodes
-
-{-@ measure potT2 @-}
-{-@ potT2 :: t:AlmostWavl -> Int @-}
-potT2 :: Tree a -> Int 
-potT2 t@Nil = 0
-potT2 t@(Tree _ n l r)
-  | rk l + 3 == n && rk r + 2 == n    = 1 + potT l + potT r    -- 2,3-Node
-  | rk r + 3 == n && rk l + 2 == n    = 1 + potT l + potT r    -- 3,2-Node
-  | rk r + 2 == n && rk l + 2 == n    = 1 + potT l + potT r    -- 2,2-Node
-  | otherwise = potT l + potT r
-
-{-@ demoteL :: s:Node3_2 -> {t:NEWavl | RkDiff s t 1 && potT2 s == potT2 t + 1 } @-}
+                    t = RTick.step (tcost r) (pure (Tree x n l r')) 
+                    r' = tval r
+  
+{-@ demoteL :: s:Node3_2 -> {t:NEWavl | RkDiff s t 1 && potT2 s == potT2 t } @-}
 demoteL :: Tree a -> Tree a
 demoteL (Tree a n l r) = Tree a (n - 1) l r
 
-{-@ doubleDemoteL :: {s:Node3_1 | IsNode2_2 (right s) } -> {t:NEWavl | RkDiff s t 1 && potT2 s == potT2 t + 1 } @-}
+{-@ doubleDemoteL :: {s:Node3_1 | IsNode2_2 (right s) } -> {t:NEWavl | RkDiff s t 1 && potT2 s + 1 == potT2 t } @-}
 doubleDemoteL :: Tree a -> Tree a
 doubleDemoteL (Tree x n l (Tree y m rl rr)) = (Tree x (n-1) l (Tree x (m-1) rl rr))
 
 {-@ rotateLeftD :: {s:Node3_1 | Child1 (rk (right s)) (right (right s)) 
           && (potT (left s)) + (potT (right s)) == potT2 s} 
-          -> {t:NEWavl | EqRk s t && (potT2 s == potT2 t || potT2 s + 1 == potT2 t) } @-} 
+          -> {t:NEWavl | EqRk s t && (potT2 s - 1 == potT t || potT2 s == potT t || potT2 s + 1 == potT t) } @-}
 rotateLeftD t@(Tree z n l@Nil (Tree y m rl@Nil rr)) = Tree y (m+1) (singleton z) rr
 rotateLeftD t@(Tree z n l (Tree y m rl rr)) = Tree y (m+1) (Tree z (n-1) l rl) rr 
 
 {-@ rotateDoubleLeftD :: {s:Node3_1 | IsNode1_2 (right s) 
           && (potT (left s)) + (potT (right s)) == potT2 s } 
-          -> {t:NEWavl | EqRk s t && potT2 s <= potT2 t } @-}
+          -> {t:NEWavl | EqRk s t && (potT2 s == potT t || potT2 s + 1 == potT t ) } @-} 
 rotateDoubleLeftD :: Tree a -> Tree a
 rotateDoubleLeftD (Tree z n l (Tree y m (Tree x o rll rlr) rr)) = Tree x n (Tree z (n-2) l rll) (Tree y (n-2) rlr rr)
 
-{-@ demoteR :: s:Node2_3 -> {t:NEWavl | RkDiff s t 1 && potT2 s == potT2 t + 1 } @-}
+{-@ demoteR :: s:Node2_3 -> {t:NEWavl | RkDiff s t 1 && potT2 s == potT2 t } @-}
 demoteR :: Tree a -> Tree a
 demoteR (Tree a n l r) = Tree a (n - 1) l r
 
 {-@ doubleDemoteR :: {s:Node1_3 | IsNode2_2 (left s) } 
-          -> {t:NEWavl | RkDiff s t 1 && potT2 s == potT2 t + 1 } @-}
+          -> {t:NEWavl | RkDiff s t 1 && potT2 s + 1 == potT2 t } @-}
 doubleDemoteR :: Tree a -> Tree a
 doubleDemoteR (Tree x n (Tree y m ll lr) r) = Tree x (n-1) (Tree y (m-1) ll lr) r 
 
--- {-@ reflect rotateRightD @-}
 {-@ rotateRightD :: {s:Node1_3 | Child1 (rk (left s)) (left (left s))  
           && (potT (left s)) + (potT (right s)) == potT2 s} 
-          -> {t:NEWavl | EqRk s t && (potT2 s == potT2 t || potT2 s + 1 == potT2 t) } @-} 
+          -> {t:NEWavl | EqRk s t && (potT2 s - 1 == potT t || potT2 s == potT t || potT2 s + 1 == potT t) } @-}
 rotateRightD :: Tree a -> Tree a
 rotateRightD (Tree x n (Tree y m ll Nil) Nil) = Tree y (m+1) ll (singleton x)
 rotateRightD (Tree x n (Tree y m ll lr) r) = Tree y (m+1) ll (Tree x (n-1) lr r) 
 
-{-@ rotateDoubleRightD :: {s:Node1_3 | IsNode2_1 (left s) && (potT (right s)) + (potT  (left s)) == potT2 s }
-          -> {t:NEWavl | EqRk s t && potT2 s <= potT2 t } @-}
+{-@ rotateDoubleRightD :: {s:Node1_3 | IsNode2_1 (left s) && (potT (left s)) + (potT (right s)) == potT2 s }
+          -> {t:NEWavl | EqRk s t && (potT2 s == potT t || potT2 s + 1 == potT t ) } @-}
 rotateDoubleRightD :: Tree a -> Tree a
 rotateDoubleRightD (Tree x n (Tree y m ll (Tree z o lrl lrr)) r) = Tree z (o+2) (Tree y (m-1) ll lrl) (Tree x (n-2) lrr r)
 
@@ -474,13 +489,13 @@ rotateDoubleRightD (Tree x n (Tree y m ll (Tree z o lrl lrr)) r) = Tree z (o+2) 
 --             *** QED
 
 -- Test
-main = do
-    mapM_ print [a,b,c,d,e,f,g]
-  where
-    a = singleton 5
-    b = insert 2 a
-    c = insert 3 b
-    d = insert 7 c
-    e = insert 10 d
-    f = delete 3 e
-    g = delete 10 f
+-- main = do
+--     mapM_ print [a,b,c,d,e,f,g]
+--   where
+--     a = singleton 5
+--     b = insert 2 a
+--     c = insert 3 b
+--     d = insert 7 c
+--     e = insert 10 d
+--     f = delete 3 e
+--     g = delete 10 f
