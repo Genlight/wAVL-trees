@@ -17,16 +17,16 @@ import Language.Haskell.Liquid.RTick as RTick
 {-@ type AlmostWavl' = {t:Tree a | (not (WAVL.notEmptyTree t)) || (WAVL.balanced (WAVL.left t) && WAVL.balanced (WAVL.right t)) } @-}
 {-@ type NEAlmostWavl' = {t:AlmostWavl' | WAVL.notEmptyTree t } @-}
 {-@ type NodeRank = {v:Int | v >= 0} @-}
-{-@ type Node0_1 = { v:AlmostWavl | WAVL.notEmptyTree v  && WAVL.notEmptyTree (left v) && (RkDiff v (left v) 0 ) && (RkDiff v (right v) 1) && rk v >= 0 } @-}
-{-@ type Node1_0 = { v:AlmostWavl | WAVL.notEmptyTree v && WAVL.notEmptyTree (right v) && (RkDiff v (left v) 1 ) && (RkDiff v (right v) 0) && rk v >= 0 } @-}
-{-@ type Node2_1 = { v:NEWavl | IsNode2_1 v } @-}
-{-@ type Node1_2 = { v:NEWavl | IsNode1_2 v } @-}
-{-@ type Node0_2 = { v:AlmostWavl | WAVL.notEmptyTree v && WAVL.notEmptyTree (left v) && EqRk v (left v) && RkDiff v (right v) 2  && rk v >= 1 } @-}
-{-@ type Node2_0 = { v:AlmostWavl | WAVL.notEmptyTree v && WAVL.notEmptyTree (right v) && EqRk v (right v) && RkDiff v (left v) 2 && rk v >= 1 } @-}
-{-@ type Node1_3 = { v:AlmostWavl | WAVL.notEmptyTree v && WAVL.notEmptyTree (left v) && RkDiff v (left v) 1 && RkDiff v (right v) 3  && rk v >= 2 } @-}
-{-@ type Node3_1 = { v:AlmostWavl | WAVL.notEmptyTree v && WAVL.notEmptyTree (right v) && RkDiff v (left v) 3 && RkDiff v (right v) 1 && rk v >= 2 } @-}
-{-@ type Node3_2 = { v:AlmostWavl | WAVL.notEmptyTree v && WAVL.notEmptyTree (right v) && RkDiff v (left v) 3 && RkDiff v (right v) 2 && rk v >= 2 } @-}
-{-@ type Node2_3 = { v:AlmostWavl | WAVL.notEmptyTree v && WAVL.notEmptyTree (left v) && RkDiff v (left v) 2 && RkDiff v (right v) 3  && rk v >= 2 } @-}
+{-@ type Node0_1 = { v:AlmostWavl' | WAVL.notEmptyTree v  && WAVL.notEmptyTree (left v) && (RkDiff v (left v) 0 ) && (RkDiff v (right v) 1) && rk v >= 0 } @-}
+{-@ type Node1_0 = { v:AlmostWavl' | WAVL.notEmptyTree v && WAVL.notEmptyTree (right v) && (RkDiff v (left v) 1 ) && (RkDiff v (right v) 0) && rk v >= 0 } @-}
+{-@ type Node2_1 = { v:NEWavl' | IsNode2_1 v } @-}
+{-@ type Node1_2 = { v:NEWavl' | IsNode1_2 v } @-}
+{-@ type Node0_2 = { v:AlmostWavl' | WAVL.notEmptyTree v && WAVL.notEmptyTree (left v) && EqRk v (left v) && RkDiff v (right v) 2  && rk v >= 1 } @-}
+{-@ type Node2_0 = { v:AlmostWavl' | WAVL.notEmptyTree v && WAVL.notEmptyTree (right v) && EqRk v (right v) && RkDiff v (left v) 2 && rk v >= 1 } @-}
+{-@ type Node1_3 = { v:AlmostWavl' | WAVL.notEmptyTree v && WAVL.notEmptyTree (left v) && RkDiff v (left v) 1 && RkDiff v (right v) 3  && rk v >= 2 } @-}
+{-@ type Node3_1 = { v:AlmostWavl' | WAVL.notEmptyTree v && WAVL.notEmptyTree (right v) && RkDiff v (left v) 3 && RkDiff v (right v) 1 && rk v >= 2 } @-}
+{-@ type Node3_2 = { v:AlmostWavl' | WAVL.notEmptyTree v && WAVL.notEmptyTree (right v) && RkDiff v (left v) 3 && RkDiff v (right v) 2 && rk v >= 2 } @-}
+{-@ type Node2_3 = { v:AlmostWavl' | WAVL.notEmptyTree v && WAVL.notEmptyTree (left v) && RkDiff v (left v) 2 && RkDiff v (right v) 3  && rk v >= 2 } @-}
 
 -- potential analysis for deletion
 {-@ measure potT @-}
@@ -179,29 +179,3 @@ rotateRightD' (Tree x n (Tree y m ll lr) r) = Tree y (m+1) ll (Tree x (n-1) lr r
           -> {t:NEWavl | EqRk s t && (potT2 s == potT2 t || potT2 s + 1 == potT2 t) } @-}
 rotateDoubleRightD' :: Tree a -> Tree a
 rotateDoubleRightD' (Tree x n (Tree y m ll (Tree z o lrl lrr)) r) = Tree z (o+2) (Tree y (m-1) ll lrl) (Tree x (n-2) lrr r)
-
--- Proof of theorem 4.3: 
--- {-@ theorem4_3 :: x:a -> t:Wavl' -> { (potT (delete' x t)) + tcost (delete' x t) <= (potT t) + 1 } @-}
--- theorem4_3 :: a -> Tree a -> ()
--- theorem4_3 x t@Nil = () *** QED
--- theorem4_3 x t@(Tree _ _ l r) = () *** QED
-
-
-{- sub proof of 4.3: show that if you use a shortened version of balRDel that in a balanced tree no rotations will 
-    happen, either with single or double rotate
-    and the ovreall Tick cost will remain 0 for such a recursive operation
--}
-
--- assume that all Nil can have no assoc. potential
--- {-@ invariant {v:Tick (Tree a) | (notEmptyTree (tval v)) || (tcost v == 0)} @-}
-
-{- lemma: using the rebalancing function on an already balanced tree (Wavl') will result in 0 Ticks -}
-
--- {-@ balancedRLemma :: x:a -> n:NodeRank -> {l:MaybeWavlNode' | Is2ChildN n l} -> {r:WTick ({r':Wavl' | Is2ChildN n r'}) | tcost r >= 0 } -> {tcost (balRDel' x n l r) == tcost r} @-}
--- balancedRLemma :: a -> Int -> Tree a -> Tick (Tree a) -> ()
--- balancedRLemma x 0 Nil r@(Tick _ Nil) = tcost (pure (singleton x)) === 0 
---                                         =<= tcost r === tcost (RTick.step (tcost r) (pure (singleton x)))  *** QED
--- balancedRLemma x 1 Nil r@(Tick _ Nil) = () *** QED
--- balancedRLemma x n l r = tcost r === tcost (RTick.step (tcost r) (pure (Tree x n l (tval r)))) *** QED
-
--- {-@ type WTick T = {v:Tick (T) | (notEmptyTree (tval v)) || (tcost v == 0)} @-}
