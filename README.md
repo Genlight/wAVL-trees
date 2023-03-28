@@ -86,7 +86,9 @@ Either a rank violation in form of a 0-child is carried along and the first patt
 
 Thus, we have shown that every possible case in the recursion is matched and the otherwise operation will not execute. 
 
+## Refinement reflection
 
+I had the case, when I did some tests on how to add the potential function `potT` and `pot2` to the function refinement of the rotation, I originally planned to use the reflected functions (via `{-@ LIQUID "--reflection" @-}`) in some form of proof. Later, I was able to forego these sorts of proof and didn't need to reflect my functions to the logic. 
 
-
-
+At this point I removed the `{-@ reflect myFunc @-}` annotations and I thought that the file would still compile but that wasn't the case. After some trials I found that 
+reflecting `singleton` into the logic helped checking the refinement of two of my rotate cases (`rotateRightD` and `rotateLeftD`). without singleton, the following expression could not be checked: `(potT2 t' + tcost t - tcost s) == potT2 (tval s)`
