@@ -82,8 +82,8 @@ balanced t@(Tree _ n l r) = rk r < n && n <= rk r + 2
 isWavlNode :: Tree a -> Bool
 isWavlNode Nil = True 
 isWavlNode t@(Tree x n l r) =  ((rk l) + 2 == n && (rk r) + 2 == n && notEmptyTree l && notEmptyTree r) ||
-                ((rk l) + 1 == n && (rk r) + 2 == n) ||
-                ((rk l) + 2 == n && (rk r) + 1 == n) ||
+                ((rk l) + 1 == n && (rk r) + 2 == n && notEmptyTree l) ||
+                ((rk l) + 2 == n && (rk r) + 1 == n && notEmptyTree r) ||
                 ((rk l) + 1 == n && (rk r) + 1 == n)
 
 {-@ singleton :: a -> {v:NEWavl | ht v == 0 && rk v == 0 } @-}
