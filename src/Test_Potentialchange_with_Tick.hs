@@ -266,8 +266,8 @@ is0ChildN n t = (rk t) == n
 {-@ insert :: (Ord a) => a -> s:Wavl -> t':{Tick ({t:NEWavl | (EqRk t s || RkDiff t s 1) 
           && (not (isNode2_2 t) || (EqRk t s)) 
           && ((not (isNode1_1 t && rk t > 0)) || EqRk t s) && IsWavlNode t 
-          && (potT t + tcost t' <= potT s  + 5) }) 
-          | tcost t' >= 0 } @-} 
+           }) 
+          | tcost t' >= 0 } @-} -- && (tcost t' <= potT t - potT s + 5)
 insert :: (Ord a) => a -> Tree a -> Tick (Tree a)
 insert x Nil = pure (singleton x)
 insert x t@(Tree v n l r) = case compare x v of
@@ -279,10 +279,10 @@ insert x t@(Tree v n l r) = case compare x v of
       r' = insert x r
       l'' = tval l'
       r'' = tval r'
-      insL | rk l'' < n = RTick.step (tcost l') (pure (Tree v n l'' r))
+      insL | rk l'' < n  = RTick.step (tcost l') (pure (Tree v n l'' r))
            | rk l'' == n = RTick.step (tcost l' + 1) (pure (balL v n l'' r)) 
-      insR | rk r'' < n = RTick.step (tcost r') (pure (Tree v n l r''))
-           | otherwise = RTick.step (tcost r' + 1) (pure (balR v n l r''))
+      insR | rk r'' < n  = RTick.step (tcost r') (pure (Tree v n l r''))
+           | rk r'' == n = RTick.step (tcost r' + 1) (pure (balR v n l r''))
 
 {-@ balL :: x:a -> n:NodeRank -> {l:NEWavl | Is0ChildN n l && ((isNode1_1 l && rk l == 0) || isNode2_1 l || isNode1_2 l) }
           -> {r:Wavl | Is2ChildN n r} 
