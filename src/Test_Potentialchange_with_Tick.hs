@@ -263,53 +263,78 @@ is0ChildN n t = (rk t) == n
   * when singleton is called, a 1,1-node is returned and RkDiff is 1
   * when a 2,2-node is returned, it has to be RkDiff 0 since it could only be returned from the `rk l' < n` case
 -}
--- {-@ insert :: (Ord a) => a -> s:Wavl -> t':{Tick ({t:NEWavl | (RkDiff t s 0 || RkDiff t s 1) 
---           && (not (isNode2_2 t) || (RkDiff t s 0)) 
---           && ((not (isNode1_1 t && rk t > 0)) || RkDiff t s 0) && IsWavlNode t }) 
---           | tcost t' >= 0 } @-} 
--- insert :: (Ord a) => a -> Tree a -> Tick (Tree a)
--- insert x Nil = pure (singleton x)
--- insert x t@(Tree v n l r) = case compare x v of
---     LT -> insL
---     GT -> insR
---     EQ -> pure t
---     where 
---       l' = insert x l
---       r' = insert x r
---       l'' = tval l'
---       r'' = tval r'
---       insL | rk l'' < n = RTick.step (tcost l') (pure (Tree v n l'' r))
---            | otherwise = balL v n l' r 
---       insR | rk r'' < n = RTick.step (tcost l') (pure (Tree v n l r''))
---            | otherwise = balR v n l r'
+{-@ insert :: (Ord a) => a -> s:Wavl -> t':{Tick ({t:NEWavl | (EqRk t s || RkDiff t s 1) 
+          && (not (isNode2_2 t) || (EqRk t s)) 
+          && ((not (isNode1_1 t && rk t > 0)) || EqRk t s) && IsWavlNode t }) 
+          | tcost t' >= 0 } @-} 
+insert :: (Ord a) => a -> Tree a -> Tick (Tree a)
+insert x Nil = pure (singleton x)
+insert x t@(Tree v n l r) = case compare x v of
+    LT -> insL
+    GT -> insR
+    EQ -> pure t
+    where 
+      l' = insert x l
+      r' = insert x r
+      l'' = tval l'
+      r'' = tval r'
+      insL | rk l'' < n = RTick.step (tcost l') (pure (Tree v n l'' r))
+           | rk l'' == n = RTick.step (tcost l' + 1) (pure (balL v n l'' r)) 
+      insR | rk r'' < n = RTick.step (tcost r') (pure (Tree v n l r''))
+           | otherwise = RTick.step (tcost r' + 1) (pure (balR v n l r''))
 
-{-@ balL :: a -> n:NodeRank -> {l':Tick ({l:NEWavl | Is0ChildN n l && ((isNode1_1 l && rk l == 0) || isNode2_1 l || isNode1_2 l) }) | tcost l' >= 0} 
+{-@ balL :: a -> n:NodeRank -> {l:NEWavl | Is0ChildN n l && ((isNode1_1 l && rk l == 0) || isNode2_1 l || isNode1_2 l) }
           -> {r:Wavl | Is2ChildN n r} 
-          -> {t':Tick ({t:NEWavl | (rk t == n || rk t == n + 1) && not (isNode2_2 t) 
+          -> {t:NEWavl | (rk t == n || rk t == n + 1) && not (isNode2_2 t) 
             && ((not (isNode1_1 t && rk t == 0)) || rk t - n == 1) 
-            && ((not (isNode1_1 t && rk t > 0)) || rk t == n) && IsWavlNode t}) 
-            | tcost t' >= 0}  @-}
-balL :: a -> Int -> Tick (Tree a) -> Tree a -> Tick (Tree a)
-balL x n l r | rk l' == rk r + 1 = RTick.wmap promoteL t
-             | rk l' == rk r + 2 && (rk (right l') + 2) == rk l' = RTick.wmap rotateRight t 
-             | rk l' == rk r + 2 && (rk (right l') + 1) == rk l' = RTick.wmap rotateDoubleRight t 
+            && ((not (isNode1_1 t && rk t > 0)) || rk t == n) && IsWavlNode t} @-}
+balL :: a -> Int -> Tree a -> Tree a -> Tree a
+balL x n l r | rk l == rk r + 1 =  promoteL t
+             | rk l == rk r + 2 && (rk (right l) + 2) == rk l =  rotateRight t 
+             | rk l == rk r + 2 && (rk (right l) + 1) == rk l =  rotateDoubleRight t 
               where 
-                t = RTick.step (tcost l) (pure (Tree x n l' r))
-                l' = tval l
+                t = Tree x n l r
 
 {-@ balR :: a -> n:NodeRank -> {l:Wavl | Is2ChildN n l } 
-          -> {r':Tick ({r:NEWavl | Is0ChildN n r && ((isNode1_1 r && rk r == 0) || isNode2_1 r || isNode1_2 r)}) | tcost r' >= 0 }
-          -> {t':Tick ({t:NEWavl | (rk t == n || rk t == n + 1) && not (isNode2_2 t) 
+          -> {r:NEWavl | Is0ChildN n r && ((isNode1_1 r && rk r == 0) || isNode2_1 r || isNode1_2 r)}
+          -> {t:NEWavl | (rk t == n || rk t == n + 1) && not (isNode2_2 t) 
             && ((not (isNode1_1 t && rk t == 0)) || rk t - n == 1) 
-            && ((not (isNode1_1 t && rk t > 0)) || rk t == n) && IsWavlNode t }) | tcost t' >= 0 }  @-}
-balR :: a -> Int -> Tree a -> Tick (Tree a) -> Tick (Tree a)
-balR x n l r  | rk r' == rk l + 1 = RTick.wmap promoteR t
-              | rk r' == rk l + 2 && (rk (left r') + 2) == rk r' = RTick.wmap rotateLeft t 
-              | rk r' == rk l + 2 && (rk (left r') + 1) == rk r' = RTick.wmap rotateDoubleLeft t 
+            && ((not (isNode1_1 t && rk t > 0)) || rk t == n) && IsWavlNode t }  @-}
+balR :: a -> Int -> Tree a -> Tree a -> Tree a
+balR x n l r  | rk r == rk l + 1 =  promoteR t
+              | rk r == rk l + 2 && (rk (left r) + 2) == rk r =  rotateLeft t 
+              | rk r == rk l + 2 && (rk (left r) + 1) == rk r =  rotateDoubleLeft t 
                where 
-                 t = RTick.step (tcost r) (pure (Tree x n l r'))
-                 r' = tval r
+                 t = Tree x n l r
 
 {-@ idWavl :: {v:NEWavl | Is1Child v (left v) } -> {t:NEWavl | rk v == rk t} @-}
 idWavl :: Tree a -> Tree a
 idWavl t = t
+
+
+-- {-@ balL :: a -> n:NodeRank -> {l':Tick ({l:NEWavl | Is0ChildN n l && ((isNode1_1 l && rk l == 0) || isNode2_1 l || isNode1_2 l) }) | tcost l' >= 0} 
+--           -> {r:Wavl | Is2ChildN n r} 
+--           -> {t':Tick ({t:NEWavl | (rk t == n || rk t == n + 1) && not (isNode2_2 t) 
+--             && ((not (isNode1_1 t && rk t == 0)) || rk t - n == 1) 
+--             && ((not (isNode1_1 t && rk t > 0)) || rk t == n) && IsWavlNode t}) 
+--             | tcost t' >= 0}  @-}
+-- balL :: a -> Int -> Tick (Tree a) -> Tree a -> Tick (Tree a)
+-- balL x n l r | rk l' == rk r + 1 = RTick.wmap promoteL t
+--              | rk l' == rk r + 2 && (rk (right l') + 2) == rk l' = RTick.wmap rotateRight t 
+--              | rk l' == rk r + 2 && (rk (right l') + 1) == rk l' = RTick.wmap rotateDoubleRight t 
+--               where 
+--                 t = RTick.step (tcost l) (pure (Tree x n l' r))
+--                 l' = tval l
+
+-- {-@ balR :: a -> n:NodeRank -> {l:Wavl | Is2ChildN n l } 
+--           -> {r':Tick ({r:NEWavl | Is0ChildN n r && ((isNode1_1 r && rk r == 0) || isNode2_1 r || isNode1_2 r)}) | tcost r' >= 0 }
+--           -> {t':Tick ({t:NEWavl | (rk t == n || rk t == n + 1) && not (isNode2_2 t) 
+--             && ((not (isNode1_1 t && rk t == 0)) || rk t - n == 1) 
+--             && ((not (isNode1_1 t && rk t > 0)) || rk t == n) && IsWavlNode t }) | tcost t' >= 0 }  @-}
+-- balR :: a -> Int -> Tree a -> Tick (Tree a) -> Tick (Tree a)
+-- balR x n l r  | rk r' == rk l + 1 = RTick.wmap promoteR t
+--               | rk r' == rk l + 2 && (rk (left r') + 2) == rk r' = RTick.wmap rotateLeft t 
+--               | rk r' == rk l + 2 && (rk (left r') + 1) == rk r' = RTick.wmap rotateDoubleLeft t 
+--                where 
+--                  t = RTick.step (tcost r) (pure (Tree x n l r'))
+--                  r' = tval r
