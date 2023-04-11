@@ -256,25 +256,31 @@ is0ChildN n t = (rk t) == n
     then we can say for t:
      (isNode1_1 t && rk t == 0) ==> RkDiff t s 1           <=> (not (isNode1_1 t && rk t == 0)) || RkDiff t s 1
      (isNode1_1 t && rk t > 0)  ==> RkDiff t s 0           <=> (not (isNode1_1 t && rk t > 0))  || RkDiff t s 0
--}
--- {-@ insert :: (Ord a) => a -> s:Wavl -> {t:NEWavl | (RkDiff t s 0 || RkDiff t s 1) && (not (isNode2_2 t) || (RkDiff t s 0)) && ((not (isNode1_1 t && rk t == 0)) || RkDiff t s 1) && ((not (isNode1_1 t && rk t > 0)) || RkDiff t s 0)} @-}
--- insert :: (Ord a) => a -> Tree a -> Tree a
--- insert x Nil = singleton x
--- insert x t@(Tree v n l r) = case compare x v of
---     LT -> insL
---     GT -> insR
---     EQ -> t
---     where 
---       l' = insert x l
---       r' = insert x r
---       insL | rk l' < n = Tree v n l' r
---            | otherwise = balL v n l' r 
---           --  | is0ChildN n l' && ((isNode1_1 l' && rk l' == 0) || isNode2_1 l' || isNode1_2 l') = balL v n l' r 
---           --  | otherwise = balL v n l' r 
---       insR | rk r' < n = Tree v n l r'
---            | otherwise = balR v n l r'
 
-{-@ balL :: a -> n:NodeRank -> {l:NEWavl | Is0ChildN n l && ((isNode1_1 l && rk l == 0) || isNode2_1 l || isNode1_2 l) } -> {r:Wavl | Is2ChildN n r} -> {t:NEWavl | (rk t == n || rk t == n + 1) && not (isNode2_2 t) && ((not (isNode1_1 t && rk t == 0)) || rk t - n == 1) && ((not (isNode1_1 t && rk t > 0)) || rk t == n) }  @-}
+     And 
+-}
+{-@ insert :: (Ord a) => a -> s:Wavl -> {t:NEWavl | (RkDiff t s 0 || RkDiff t s 1) 
+          && (not (isNode2_2 t) || (RkDiff t s 0)) 
+          && ((not (isNode1_1 t && rk t > 0)) || RkDiff t s 0) && IsWavlNode t } @-} 
+insert :: (Ord a) => a -> Tree a -> Tree a
+insert x Nil = singleton x
+insert x t@(Tree v n l r) = case compare x v of
+    LT -> insL
+    GT -> insR
+    EQ -> t
+    where 
+      l' = insert x l
+      r' = insert x r
+      insL | rk l' < n = Tree v n l' r
+           | otherwise = balL v n l' r 
+      insR | rk r' < n = Tree v n l r'
+           | otherwise = balR v n l r'
+
+{-@ balL :: a -> n:NodeRank -> {l:NEWavl | Is0ChildN n l && ((isNode1_1 l && rk l == 0) || isNode2_1 l || isNode1_2 l) } 
+          -> {r:Wavl | Is2ChildN n r} 
+          -> {t:NEWavl | (rk t == n || rk t == n + 1) && not (isNode2_2 t) 
+            && ((not (isNode1_1 t && rk t == 0)) || rk t - n == 1) 
+            && ((not (isNode1_1 t && rk t > 0)) || rk t == n) && IsWavlNode t }  @-}
 balL :: a -> Int -> Tree a -> Tree a -> Tree a
 balL x n l r | rk l == rk r + 1 = promoteL t
              | rk l == rk r + 2 && (rk (right l) + 2) == rk l = rotateRight t 
@@ -284,7 +290,9 @@ balL x n l r | rk l == rk r + 1 = promoteL t
 
 {-@ balR :: a -> n:NodeRank -> {l:Wavl | Is2ChildN n l } 
           -> {r:NEWavl | Is0ChildN n r && ((isNode1_1 r && rk r == 0) || isNode2_1 r || isNode1_2 r) } 
-          -> {t:NEWavl | (rk t == n || rk t == n + 1) && not (isNode2_2 t) && ((not (isNode1_1 t && rk t == 0)) || rk t - n == 1) && ((not (isNode1_1 t && rk t > 0)) || rk t == n) }  @-}
+          -> {t:NEWavl | (rk t == n || rk t == n + 1) && not (isNode2_2 t) 
+            && ((not (isNode1_1 t && rk t == 0)) || rk t - n == 1) 
+            && ((not (isNode1_1 t && rk t > 0)) || rk t == n) && IsWavlNode t }  @-}
 balR :: a -> Int -> Tree a -> Tree a -> Tree a
 balR x n l r  | rk r == rk l + 1 = promoteR t
               | rk r == rk l + 2 && (rk (left r) + 2) == rk r = rotateLeft t 
