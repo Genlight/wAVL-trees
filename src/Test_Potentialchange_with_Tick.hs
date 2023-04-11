@@ -6,6 +6,7 @@
 module Test_Potentialchange_with_Tick where
 
 import Prelude hiding (pure)
+import Language.Haskell.Liquid.ProofCombinators
 import Language.Haskell.Liquid.RTick as RTick
 
 {-@ reflect singleton @-}
@@ -265,9 +266,8 @@ is0ChildN n t = (rk t) == n
 -}
 {-@ insert :: (Ord a) => a -> s:Wavl -> t':{Tick ({t:NEWavl | (EqRk t s || RkDiff t s 1) 
           && (not (isNode2_2 t) || (EqRk t s)) 
-          && ((not (isNode1_1 t && rk t > 0)) || EqRk t s) && IsWavlNode t 
-           }) 
-          | tcost t' >= 0 } @-} -- && (tcost t' <= potT t - potT s + 5)
+          && ((not (isNode1_1 t && rk t > 0)) || EqRk t s) && IsWavlNode t }) 
+          | tcost t' >= 0  } @-}  -- && (potT (tval t') + tcost t' <= potT s + 5)
 insert :: (Ord a) => a -> Tree a -> Tick (Tree a)
 insert x Nil = pure (singleton x)
 insert x t@(Tree v n l r) = case compare x v of
@@ -289,7 +289,7 @@ insert x t@(Tree v n l r) = case compare x v of
           -> {t:NEWavl | (rk t == n || rk t == n + 1) && not (isNode2_2 t) 
             && ((not (isNode1_1 t && rk t == 0)) || rk t - n == 1) 
             && ((not (isNode1_1 t && rk t > 0)) || rk t == n) && IsWavlNode t 
-            && (potT t + 1 <= potT2 (Tree x n l r) + 3) } @-} -- tcost == 1
+            && (potT t + 1 <= potT2 (Tree x n l r) + 3) } @-} -- tcost == 1, amortisiert == 2
 balL :: a -> Int -> Tree a -> Tree a -> Tree a
 balL x n l r | rk l == rk r + 1 =  promoteL t
              | rk l == rk r + 2 && (rk (right l) + 2) == rk l =  rotateRight t 
@@ -314,12 +314,33 @@ balR x n l r  | rk r == rk l + 1 =  promoteR t
 idWavl :: Tree a -> Tree a
 idWavl t = t
 
+-- doesn't work, l' /r' are not recognized to be the concrete type in spite of being recognized when unwrapped
+-- {-@ insert :: (Ord a) => a -> s:Wavl -> t':{Tick ({t:NEWavl | (EqRk t s || RkDiff t s 1) 
+--           && (not (isNode2_2 t) || (EqRk t s)) 
+--           && ((not (isNode1_1 t && rk t > 0)) || EqRk t s) && IsWavlNode t }) 
+--           | tcost t' >= 0  } @-}  -- && (potT (tval t') + tcost t' <= potT s + 5)
+-- insert :: (Ord a) => a -> Tree a -> Tick (Tree a)
+-- insert x Nil = pure (singleton x)
+-- insert x t@(Tree v n l r) = case compare x v of
+--     LT -> insL
+--     GT -> insR
+--     EQ -> pure t
+--     where 
+--       l' = insert x l
+--       r' = insert x r
+--       l'' = tval l'
+--       r'' = tval r'
+--       insL | rk l'' < n  = RTick.step (tcost l') (pure (Tree v n l'' r))
+--            | rk (tval l') == n = balL v n l' r
+--       insR | rk r'' < n  = RTick.step (tcost r') (pure (Tree v n l r''))
+--            | rk r'' == n = balR v n l r'
 
--- {-@ balL :: a -> n:NodeRank -> {l':Tick ({l:NEWavl | Is0ChildN n l && ((isNode1_1 l && rk l == 0) || isNode2_1 l || isNode1_2 l) }) | tcost l' >= 0} 
+-- {-@ balL :: x:a -> n:NodeRank -> {l':Tick ({l:NEWavl | Is0ChildN n l && ((isNode1_1 l && rk l == 0) || isNode2_1 l || isNode1_2 l) }) | tcost l' >= 0} 
 --           -> {r:Wavl | Is2ChildN n r} 
 --           -> {t':Tick ({t:NEWavl | (rk t == n || rk t == n + 1) && not (isNode2_2 t) 
 --             && ((not (isNode1_1 t && rk t == 0)) || rk t - n == 1) 
---             && ((not (isNode1_1 t && rk t > 0)) || rk t == n) && IsWavlNode t}) 
+--             && ((not (isNode1_1 t && rk t > 0)) || rk t == n) && IsWavlNode t 
+--             && (potT t + tcost t' - tcost l' <= potT2 (Tree x n (tval l') r) + 3) }) 
 --             | tcost t' >= 0}  @-}
 -- balL :: a -> Int -> Tick (Tree a) -> Tree a -> Tick (Tree a)
 -- balL x n l r | rk l' == rk r + 1 = RTick.wmap promoteL t
@@ -329,11 +350,13 @@ idWavl t = t
 --                 t = RTick.step (tcost l) (pure (Tree x n l' r))
 --                 l' = tval l
 
--- {-@ balR :: a -> n:NodeRank -> {l:Wavl | Is2ChildN n l } 
+-- {-@ balR :: x:a -> n:NodeRank -> {l:Wavl | Is2ChildN n l } 
 --           -> {r':Tick ({r:NEWavl | Is0ChildN n r && ((isNode1_1 r && rk r == 0) || isNode2_1 r || isNode1_2 r)}) | tcost r' >= 0 }
 --           -> {t':Tick ({t:NEWavl | (rk t == n || rk t == n + 1) && not (isNode2_2 t) 
 --             && ((not (isNode1_1 t && rk t == 0)) || rk t - n == 1) 
---             && ((not (isNode1_1 t && rk t > 0)) || rk t == n) && IsWavlNode t }) | tcost t' >= 0 }  @-}
+--             && ((not (isNode1_1 t && rk t > 0)) || rk t == n) && IsWavlNode t 
+--             && (potT t + tcost t' - tcost r' <= potT2 (Tree x n l (tval r')) + 3 )})
+--             | tcost t' >= 0 }  @-}
 -- balR :: a -> Int -> Tree a -> Tick (Tree a) -> Tick (Tree a)
 -- balR x n l r  | rk r' == rk l + 1 = RTick.wmap promoteR t
 --               | rk r' == rk l + 2 && (rk (left r') + 2) == rk r' = RTick.wmap rotateLeft t 
@@ -341,3 +364,4 @@ idWavl t = t
 --                where 
 --                  t = RTick.step (tcost r) (pure (Tree x n l r'))
 --                  r' = tval r
+

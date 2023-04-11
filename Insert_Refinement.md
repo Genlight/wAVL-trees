@@ -104,3 +104,37 @@ Wir haben zwei Zustände bei insert, in welchen die Funktion einen tree mit der 
 * promote-case: `promote` gibt nur 1,2-Nodes für t zurück, nicht aber 1,1. somit ist auch dieser Fall nicht modelliert. 
 
 Somit gilt $\mathcal{I} \models \bot$ und die HT ist damit widerlegt. Somit ist $\phi$ valid für insert. 
+
+
+# potT refinement annotation zu insert
+
+das refinement von insert soll die folgende Gleichung enthalten: 
+
+$$
+\sum_{i=0}^n c_i \le \sum_{i=0}^n a_i
+$$
+
+umgeschrieben: 
+
+$$
+\sum_{i=0}^n c_i \le \sum_{i=0}^n (c_i + \Phi_i - \Phi_{i-1}) \\
+\sum_{i=0}^n c_i \le \sum_{i=0}^n (c_i) + \Phi_n - \Phi_{0} \\
+\sum_{i=0}^n c_i \le \sum_{i=0}^n (c_i) + \Phi_n \\
+$$
+
+mit:
+* _n_ ... Anzahl der Rebalancing steps
+* _t_ ... Baum 
+
+
+wobei wir wissen, dass n durch den rank von dem INput (Tree t) gebunden ist: $n <= rk t$
+
+Formel, mit der ich es versucht habe: 
+
+```haskell
+... t':Tick ({t:NEWavl | ... }) |
+... && (potT (tval t') + tcost t' <= potT s + 3)
+``` 
+
+Jedoch schafft LH es nicht von selbst, diesen Umstand zu beweisen. 
+
