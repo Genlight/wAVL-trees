@@ -257,7 +257,7 @@ is0ChildN n t = (rk t) == n
      (isNode1_1 t && rk t == 0) ==> RkDiff t s 1           <=> (not (isNode1_1 t && rk t == 0)) || RkDiff t s 1
      (isNode1_1 t && rk t > 0)  ==> RkDiff t s 0           <=> (not (isNode1_1 t && rk t > 0))  || RkDiff t s 0
 
-     And 
+  And finally, I added IsWavlNode t which made it valid, i.e. the same was done to balL/R
 -}
 {-@ insert :: (Ord a) => a -> s:Wavl -> {t:NEWavl | (RkDiff t s 0 || RkDiff t s 1) 
           && (not (isNode2_2 t) || (RkDiff t s 0)) 
