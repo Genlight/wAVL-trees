@@ -258,6 +258,10 @@ is0ChildN n t = (rk t) == n
      (isNode1_1 t && rk t > 0)  ==> RkDiff t s 0           <=> (not (isNode1_1 t && rk t > 0))  || RkDiff t s 0
 
   And finally, I added IsWavlNode t which made it valid, i.e. the same was done to balL/R
+
+  Exceptions for these rule are: 
+  * when singleton is called, a 1,1-node is returned and RkDiff is 1
+  * when a 2,2-node is returned, it has to be RkDiff 0 since it could only be returned from the `rk l' < n` case
 -}
 {-@ insert :: (Ord a) => a -> s:Wavl -> {t:NEWavl | (RkDiff t s 0 || RkDiff t s 1) 
           && (not (isNode2_2 t) || (RkDiff t s 0)) 
