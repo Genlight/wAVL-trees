@@ -117,7 +117,7 @@ empty _ = False
 {-@ singleton :: a -> {v:NEWavl | ht v == 0 && rk v == 0 && isNode1_1 v} @-}
 singleton a = Tree a 0 Nil Nil
 
--- potential analysis for deletion
+-- potential analysis for insertion
 {-@ measure potT @-}
 {-@ potT :: t:Wavl -> Int @-}
 potT :: Tree a -> Int
@@ -226,43 +226,24 @@ isNode2_2 t = (rk (left t)) + 2 == (rk t) && (rk (right t)) + 2 == rk t && notEm
 is0ChildN :: Int -> Tree a -> Bool 
 is0ChildN n t = (rk t) == n
 
--- && (potT t + (tcost t') <= potT s + 5
--- && ((IsNode1_1 t && rk t == 0) || IsNode2_1 t || IsNode1_2 t) 
 
-{- insert x t = c (child) ist
-  2,2 -> kann direkt übergeben werden, da rk c < n sein muss -> (isNode2_2 c && rk c < n)
-  1,2 || 2,1  -> ((isNode1_2 c || isNode2_1 c)
-  1,1:  kann verschiedenes sein, aber unter allen Bedingungen gilt: (rk c < n) && isNode1_1 c 
-      Ausnahme singleton:    
+{- insert x t = c is
+  2,2 -> must be EqRk, since this case isn't produced from bal*, therefore -> (isNode2_2 c) -> EqRk c t
+  1,2 || 2,1  -> can be either a case "after" rebalancing or be a promote step but also for a promote step
+  1,1:  kann verschiedenes sein, aber unter allen Bedingungen gilt: (rk c > 0) && isNode1_1 c -> EqRk c t
+      Exception is the singleton-case: (rk == 0) && isNode1_1 c => RkDiff t c 1   
   
   daraus ergibt sich die folgende Klausel für 1,1 / 2,2 (im Refinement für t): 
     (isNode2_2 t || isNode1_1 t) ==> (RkDiff t s 0) <=> 
     not (isNode2_2 t || isNode1_1 t) || (RkDiff t s 0) <=> 
     (not (isNode2_2 t) && not (isNode1_1 t)) || (RkDiff t s 0) 
 
-    refinement part for l : 
-        ((rk l == 0 <=> isNode1_1 l) || isNode2_1 l || isNode1_2 l) <=>
-        (not (isNode1_1 l && rk l == 0) || isNode2_1 l || isNode1_2 l) <=>
-        ((not (isNode1_1 l) || rk l != 0) || isNode2_1 l || isNode1_2 l) <=>
-        (not (isNode1_1 l) || rk l != 0 || isNode2_1 l || isNode1_2 l) <=>
-    
-    &&  
-
-        not (isNode2_2 t) 
-
-     ... but this can be implizit, since it has to be either 1,1 or 1,2 in the first place 
-
-     this is only valid for singleton: (not (isNode1_1 t) || (rk t == 0))
-
-    then we can say for t:
+    then we can say for t in insert:
      (isNode1_1 t && rk t == 0) ==> RkDiff t s 1           <=> (not (isNode1_1 t && rk t == 0)) || RkDiff t s 1
      (isNode1_1 t && rk t > 0)  ==> RkDiff t s 0           <=> (not (isNode1_1 t && rk t > 0))  || RkDiff t s 0
 
-  And finally, I added IsWavlNode t which made it valid, i.e. the same was done to balL/R
-
-  Exceptions for these rule are: 
-  * when singleton is called, a 1,1-node is returned and RkDiff is 1
-  * when a 2,2-node is returned, it has to be RkDiff 0 since it could only be returned from the `rk l' < n` case
+  And finally, I added IsWavlNode t which made it valid. The same was done to balL/R
+  -> my reasoning: by bounding the case gropu explicitly by defining all possible cases LH is able to determine which cases are allowed and which aren't
 -}
 {-@ insert :: (Ord a) => a -> s:Wavl -> t':{Tick ({t:NEWavl | (EqRk t s || RkDiff t s 1) 
           && (not (isNode2_2 t) || (EqRk t s)) 
@@ -284,6 +265,23 @@ insert x t@(Tree v n l r) = case compare x v of
       insR | rk r'' < n  = RTick.step (tcost r') (pure (Tree v n l r''))
            | rk r'' == n = RTick.step (tcost r' + 1) (pure (balR v n l r''))
 
+
+{-| 
+    refinement part for l in balL (symm. for r in balR): 
+        ((rk l == 0 <=> isNode1_1 l) || isNode2_1 l || isNode1_2 l) <=>
+        (not (isNode1_1 l && rk l == 0) || isNode2_1 l || isNode1_2 l) <=>
+        ((not (isNode1_1 l) || rk l != 0) || isNode2_1 l || isNode1_2 l) <=>
+        (not (isNode1_1 l) || rk l != 0 || isNode2_1 l || isNode1_2 l)
+
+    in words: 
+    I expect l to be a 0-child. In Order for that to be true, I define the allowed cases, i.e. either it can be a 1,2-Node where the 1-Child was
+    a promote case. The other case (1,1-node) happens when l was in the previous step a singleton-case (insertion of the new node into the tree).
+
+    All other cases are not possible by theory, i.e. a 1,1-node which isn't a product of a singleton, can only be either a product of a rotation-case 
+    or 1,1-case which is in any case a Child node of 1 or greater
+
+    Thus we don't exclude any cases and the refinement is valid for WAVL trees. 
+|-}
 {-@ balL :: x:a -> n:NodeRank -> {l:NEWavl | Is0ChildN n l && ((isNode1_1 l && rk l == 0) || isNode2_1 l || isNode1_2 l) }
           -> {r:Wavl | Is2ChildN n r} 
           -> {t:NEWavl | (rk t == n || rk t == n + 1) && not (isNode2_2 t) 
@@ -302,7 +300,7 @@ balL x n l r | rk l == rk r + 1 =  promoteL t
           -> {t:NEWavl | (rk t == n || rk t == n + 1) && not (isNode2_2 t) 
             && ((not (isNode1_1 t && rk t == 0)) || rk t - n == 1) 
             && ((not (isNode1_1 t && rk t > 0)) || rk t == n) && IsWavlNode t 
-            && (potT t + 1 <= potT2 (Tree x n l r) + 3)}  @-}
+            && (potT t + 1 <= potT2 (Tree x n l r) + 3)}  @-} -- tcost == 1, amortisiert == 2
 balR :: a -> Int -> Tree a -> Tree a -> Tree a
 balR x n l r  | rk r == rk l + 1 =  promoteR t
               | rk r == rk l + 2 && (rk (left r) + 2) == rk r =  rotateLeft t 

@@ -48,7 +48,7 @@ isNode2_2 :: Tree a -> Bool
 isNode2_2 t = (rk (left t)) + 2 == (rk t) && (rk (right t)) + 2 == rk t && notEmptyTree (right t) && notEmptyTree (left t)
 
 
--- potential analysis for deletion and insertion
+-- potential analysis for insertion, with deletion included
 {-@ measure potT @-}
 {-@ potT :: t:Wavl' -> Int @-}
 potT :: Tree a -> Int
@@ -137,10 +137,9 @@ rotateDoubleRight' (Tree z n (Tree x m a (Tree y o b c)) d) =  Tree y (o+1) (Tre
 rotateLeft' :: Tree a -> Tree a
 rotateLeft' t@(Tree x n a (Tree y m b c)) = Tree y m (Tree x (n-1) a b) c
 
-{-@ rotateDoubleLeft' :: {v:Node2_0 | IsNode1_2 (right v) } 
-          -> {t:Node1_1 | EqRk v t && (potT2 v + 2 == potT t || potT2 v + 1 == potT t)} @-}
-rotateDoubleLeft' :: Tree a -> Tree a
-rotateDoubleLeft' (Tree x n a (Tree y m (Tree z o b_1 b_2) c)) = Tree z (o+1) (Tree x (n-1) a b_1) (Tree y (m-1) b_2 c) 
+-- {-@ rotateDoubleLeft' :: {v:Node2_0 | IsNode1_2 (right v) } -> {t:Node1_1 | EqRk v t && (potT2 v + 2 == potT t || potT2 v + 1 == potT t)} @-}
+-- rotateDoubleLeft' :: Tree a -> Tree a
+-- rotateDoubleLeft' (Tree x n a (Tree y m (Tree z o b_1 b_2) c)) = Tree z (o+1) (Tree x (n-1) a b_1) (Tree y (m-1) b_2 c) 
 
 -- Deletion functions
 -- {-@ delete' :: a -> s:Wavl' -> {t':Tick ({t:Wavl' | ((EqRk s t) || (RkDiff s t 1)) }) | tcost t' >= 0 } @-}
