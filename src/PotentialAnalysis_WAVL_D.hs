@@ -120,7 +120,6 @@ balLDel' x n l r | n <= rk l' + 2 = t
                  | n == rk l' + 3 && rk r + 1 == n && rk (left r) + 2 == rk r && (rk (right r)) + 2 == rk r = RTick.wmap doubleDemoteL' t --same 
                  | n == rk l' + 3 && rk r + 1 == n && rk (right r) + 1 == rk r = RTick.wmap rotateLeftD' t -- +1
                  | n == rk l' + 3 && rk r + 1 == n && rk (right r) + 2 == rk r && rk (left r) + 1 == rk r = RTick.wmap rotateDoubleLeftD' t -- +1
-                 | otherwise = RTick.step (tcost l) (pure (singleton x))
                   where
                     t = RTick.step (tcost l) (pure (Tree x n l' r))
                     l' = tval l
@@ -134,7 +133,6 @@ balRDel' x n l r  | n <  rk r' + 3 = t
                   | n == rk r' + 3 && rk l + 1 == n && rk (left l) + 2 == rk l && rk (right l) + 2 == rk l = RTick.wmap doubleDemoteR' t -- same
                   | n == rk r' + 3 && rk l + 1 == n && rk (left l) + 1 == rk l = RTick.wmap rotateRightD' t -- +1
                   | n == rk r' + 3 && rk l + 1 == n && rk (left l) + 2 == rk l && rk (right l) + 1 == rk l = RTick.wmap rotateDoubleRightD' t -- +1
-                  | otherwise = t
                   where 
                     t = RTick.step (tcost r) (pure (Tree x n l r')) 
                     r' = tval r
