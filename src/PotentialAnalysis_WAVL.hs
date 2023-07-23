@@ -114,7 +114,7 @@ empty :: Tree a -> Bool
 empty Nil = True
 empty _ = False
 
-{-@ singleton :: a -> {v:NEWavl | ht v == 0 && rk v == 0 && isNode1_1 v} @-}
+{-@ singleton :: a -> {v:NEWavl | ht v == 0 && rk v == 0 && isNode1_1 v && potT v == 1} @-}
 singleton a = Tree a 0 Nil Nil
 
 -- potential analysis for insertion
@@ -194,11 +194,17 @@ demoteR (Tree a n l r) = Tree a (n - 1) l r
 doubleDemoteR :: Tree a -> Tree a
 doubleDemoteR (Tree x n (Tree y m ll lr) r) = Tree x (n-1) (Tree y (m-1) ll lr) r 
 
+
+{-- 
+potT2 s - 1 == potT t ||   ... 
+potT2 s == potT t || 
+potT2 s + 1 == potT t      ... could be removed if we add the rule about singletons not having any potential
+--}
 {-@ rotateRightD :: {s:Node1_3 | Child1 (rk (left s)) (left (left s))  
           && (potT (left s)) + (potT (right s)) == potT2 s} 
           -> {t:NEWavl | EqRk s t && (potT2 s - 1 == potT t || potT2 s == potT t || potT2 s + 1 == potT t) } @-}
 rotateRightD :: Tree a -> Tree a
-rotateRightD (Tree x n (Tree y m ll Nil) Nil) = Tree y (m+1) ll (singleton x)
+rotateRightD (Tree x n (Tree y m ll Nil) Nil) = Tree y (m+1) ll (singleton x) -- y is 2,2-node, n-2
 rotateRightD (Tree x n (Tree y m ll lr) r) = Tree y (m+1) ll (Tree x (n-1) lr r) 
 
 {-@ rotateDoubleRightD :: {s:Node1_3 | IsNode2_1 (left s) && (potT (left s)) + (potT (right s)) == potT2 s }
@@ -393,19 +399,21 @@ idWavl t = t
 --                     t = RTick.step (tcost r) (pure (Tree x n l r')) 
 --                     r' = tval r
 
--- {-@ balRDel :: x:a -> n:NodeRank -> {l:MaybeWavlNode | Is2ChildN n l} -> {r:Tick ({r':Wavl | Is3ChildN n r'}) | tcost r >= 0 } -> {t: Tick ({t':NEWavl | (rk t' == n || rk t' + 1 == n) && (potT2 t' + (tcost t - tcost r) <= (potT2 (Tree x n l (tval r))) + 7) }) | tcost t >= 0 } @-}
--- balRDel :: a -> Int -> Tree a -> Tick (Tree a) -> Tick (Tree a)
--- balRDel x 0 Nil r@(Tick _ Nil) = RTick.step (tcost r) (pure (singleton x))
--- balRDel x 1 Nil r@(Tick _ Nil) = RTick.step (tcost r) (pure (singleton x))
--- balRDel x n l r  | n <  rk r' + 3 = t
---                   | n == rk r' + 3 && rk l + 2 == n = RTick.wmap demoteR t 
---                   | n == rk r' + 3 && rk l + 1 == n && rk (left l) + 2 == rk l && rk (right l) + 2 == rk l = RTick.wmap doubleDemoteR t
---                   | n == rk r' + 3 && rk l + 1 == n && rk (left l) + 1 == rk l = RTick.step ((tcost r) + 1) (pure (rotateRightD t'))
---                   | n == rk r' + 3 && rk l + 1 == n && rk (left l) + 2 == rk l && rk (right l) + 1 == rk l = RTick.wmap rotateDoubleRightD t
---                   where 
---                     t' = Tree x n l r'
---                     t = RTick.step (tcost r) (pure (Tree x n l r')) 
---                     r' = tval r
+{-@ balRDel :: x:a -> n:NodeRank -> {l:MaybeWavlNode | Is2ChildN n l} -> {r:Tick ({r':Wavl | Is3ChildN n r'}) | tcost r >= 0 } -> 
+          {t: Tick ({t':NEWavl | (rk t' == n || rk t' + 1 == n) 
+               }) | tcost t >= 0 } @-}
+balRDel :: a -> Int -> Tree a -> Tick (Tree a) -> Tick (Tree a)
+balRDel x 0 Nil r@(Tick _ Nil) = RTick.step (tcost r) (pure (singleton x))
+balRDel x 1 Nil r@(Tick _ Nil) = RTick.step (tcost r) (pure (singleton x))
+balRDel x n l r   | n <  rk r' + 3 = t
+                  | n == rk r' + 3 && rk l + 2 == n = RTick.wmap demoteR t 
+                  | n == rk r' + 3 && rk l + 1 == n && rk (left l) + 2 == rk l && rk (right l) + 2 == rk l = RTick.wmap doubleDemoteR t
+                  | n == rk r' + 3 && rk l + 1 == n && rk (left l) + 1 == rk l                             = RTick.wmap rotateRightD t
+                  | n == rk r' + 3 && rk l + 1 == n && rk (left l) + 2 == rk l && rk (right l) + 1 == rk l = RTick.wmap rotateDoubleRightD t
+                  where 
+                    t' = Tree x n l r'
+                    t = RTick.step (tcost r) (pure (Tree x n l r')) 
+                    r' = tval r
 
 -- {-@ isTickWavl :: Tick (Wavl) -> Tick (Tree a) @-}
 -- isTickWavl :: Tick (Tree a) -> Tick (Tree a)
