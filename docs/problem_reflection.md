@@ -1,7 +1,7 @@
 # Problem description: Reflecting functions into LH logic
 
 During my trials do prove theorem 4.3 I found I couldn't reflect the balancing function `balRDel'` into the LH logic. the error messages were cryptic 
-and they pointed me to functions I could separate from itself reflect without any issues. So, after some time and different trials I found out that 
+and they pointed me to functions I could separate from the rest of my code and reflect them without any issues. So, after some trial & error I found out that 
 in order for functions with multiple cases like this: 
 
 ```haskell
