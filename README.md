@@ -1,6 +1,10 @@
-# Proving functional invariants of weak AVL trees
+# Proving theorems about weak AVL trees
 
-I showed via the LiquidHaskell framework that my functional Implementation of the wAVL trees are functional correct for insert (and delete, TODO). 
+## functional correctness
+We show via the LiquidHaskell framework that my functional Implementation of the wAVL trees are functional correct for insert and delete. 
+
+## Potential Analysis for Complexity 
+We prove automatically the theorems regarding the complexity of weak AVL trees first proven by hand in {Haeupler, 2015 #48}. 
 
 # Watch out for's of LiquidHaskell
 
@@ -92,3 +96,9 @@ I had the case, when I did some tests on how to add the potential function `potT
 
 At this point I removed the `{-@ reflect myFunc @-}` annotations and I thought that the file would still compile but that wasn't the case. After some trials I found that 
 reflecting `singleton` into the logic helped checking the refinement of two of my rotate cases (`rotateRightD` and `rotateLeftD`). without singleton, the following expression could not be checked: `(potT2 t' + tcost t - tcost s) == potT2 (tval s)`
+
+# References
+Haeupler, B., et al. (2015). "Rank-Balanced Trees." ACM Transactions on Algorithms 11(4): 1-26.
+	
+
+	
