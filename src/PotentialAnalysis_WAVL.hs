@@ -411,7 +411,6 @@ balRDel x n l r   | n <  rk r' + 3 = t
                   | n == rk r' + 3 && rk l + 1 == n && rk (left l) + 1 == rk l                             = RTick.wmap rotateRightD t
                   | n == rk r' + 3 && rk l + 1 == n && rk (left l) + 2 == rk l && rk (right l) + 1 == rk l = RTick.wmap rotateDoubleRightD t
                   where 
-                    t' = Tree x n l r'
                     t = RTick.step (tcost r) (pure (Tree x n l r')) 
                     r' = tval r
 
