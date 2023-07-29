@@ -348,7 +348,7 @@ if case
 {-@ balLDel :: x:a -> n:NodeRank -> {l:Tick ({l':Wavl | Is3ChildN n l'}) | tcost l >= 0 } -> {r':MaybeWavlNode | Is2ChildN n r'} 
           -> {t:Tick ({t':NEWavl | (rk t' == n || rk t' + 1 == n) 
           && (
-            (potT2 t' + 1 <= potT2 (Tree x n (tval l) r') + 4) 
+            ((potT2 t' + 1 <= potT2 (Tree x n (tval l) r') + 4) && (balanced t')) 
           || (potT t'  + 1 <= potT2 (Tree x n (tval l) r') + 4)) 
           })| tcost t >= 0 } @-}
 balLDel :: a -> Int -> Tick (Tree a) -> Tree a -> Tick (Tree a)
