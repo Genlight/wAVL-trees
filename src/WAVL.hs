@@ -254,8 +254,7 @@ getMin (Tree x n l@(Tree _ _ _ _) r) = ((balLDel x n l' r), x')
 
 {-@ balLDel :: a -> {n:Rank | n >= 0 } -> {l:Wavl | Is3ChildN n l} -> {r:MaybeWavlNode | Is2ChildN n r} -> {t:NEWavl | (rk t == n || rk t + 1 == n) }  @-}
 balLDel :: a -> Int -> Tree a -> Tree a -> Tree a
-balLDel x 0 Nil Nil  = singleton x
-balLDel x 1 Nil Nil  = singleton x
+balLDel x _ Nil Nil  = singleton x
 balLDel x n l r | n <= (rk l) + 2 = t 
                 | n == (rk l) + 3 && (rk r) + 2 == n = demoteL t 
                 | n == (rk l) + 3 && (rk r) + 1 == n && rk (left r) + 2 == (rk r) && (rk (right r)) + 2 == rk r = doubleDemoteL t
@@ -266,8 +265,7 @@ balLDel x n l r | n <= (rk l) + 2 = t
 
 {-@ balRDel :: a -> n:Rank -> {l:MaybeWavlNode | Is2ChildN n l} -> {r:Wavl | Is3ChildN n r} -> {t:NEWavl | rk t == n || rk t + 1 == n } @-}
 balRDel :: a -> Int -> Tree a -> Tree a -> Tree a
-balRDel x 0 Nil Nil = singleton x
-balRDel x 1 Nil Nil = singleton x
+balRDel x _ Nil Nil = singleton x
 balRDel x n l r | n < (rk r + 3) = t
                 | n == (rk r + 3) && (rk l) + 2 == n = demoteR t
                 | n == (rk r + 3) && (rk l) + 1 == n && (rk (left l)) + 2 == rk l && (rk (right l)) + 2 == rk l = doubleDemoteR t
