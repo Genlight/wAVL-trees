@@ -170,37 +170,40 @@ promoteR (Tree a n l r) = (Tree a (n+1) l r)
 {-- 
 potT2 v + 1 == potT t ... if b, c are NIL, then potT (right t) == 0
 --}
-{-@ rotateRight :: {v:Node0_2 | IsNode1_2 (left v) } -> {t:Node1_1 | EqRk v t && (potT2 v + 2 == potT t || potT2 v + 1 == potT t) } @-}
+{-@ rotateRight :: {v:Node0_2 | IsNode1_2 (left v) } 
+          -> {t:Node1_1 | EqRk v t && (potT2 v + 2 == potT t || potT2 v + 1 == potT t) } @-}
 rotateRight :: Tree a -> Tree a
 rotateRight (Tree x n (Tree y m a b) c) = Tree y m a (Tree x (n-1) b c)
 
+{-@ rotateLeft :: {v:Node2_0 | IsNode2_1 (right v) } 
+          -> {t:Node1_1 | EqRk v t && (potT2 v + 2 == potT t || potT2 v + 1 == potT t) } @-}
+rotateLeft :: Tree a -> Tree a
+rotateLeft t@(Tree x n a (Tree y m b c)) = Tree y m (Tree x (n-1) a b) c
 {-- 
 potT2 v - 1 == potT t ... if b,c are NIL, then potT (left t) == 0 &&  potT (right t) == 0 
 --}
-{-@ rotateDoubleRight :: {v:Node0_2 | IsNode2_1 (left v) } -> {t:Node1_1 | EqRk v t && (potT2 v - 1 == potT t || potT2 v + 2 == potT t || potT2 v + 1 == potT t)} @-}
+{-@ rotateDoubleRight :: {v:Node0_2 | IsNode2_1 (left v) } 
+          -> {t:Node1_1 | EqRk v t && (potT2 v - 1 == potT t || potT2 v + 2 == potT t || potT2 v + 1 == potT t)} @-}
 rotateDoubleRight :: Tree a -> Tree a 
 rotateDoubleRight (Tree z n (Tree x m a (Tree y o b c)) d) =  Tree y (o+1) (Tree x (m-1) a b) (Tree z (n-1) c d) 
-
-{-@ rotateLeft :: {v:Node2_0 | IsNode2_1 (right v) } -> {t:Node1_1 | EqRk v t && (potT2 v + 2 == potT t || potT2 v + 1 == potT t) } @-}
-rotateLeft :: Tree a -> Tree a
-rotateLeft t@(Tree x n a (Tree y m b c)) = Tree y m (Tree x (n-1) a b) c
 
 {-@ rotateDoubleLeft :: {v:Node2_0 | IsNode1_2 (right v) } 
           -> {t:Node1_1 | EqRk v t && (potT2 v - 1 == potT t || potT2 v + 2 == potT t || potT2 v + 1 == potT t) } @-}
 rotateDoubleLeft :: Tree a -> Tree a
 rotateDoubleLeft (Tree x n a (Tree y m (Tree z o b_1 b_2) c)) = Tree z (o+1) (Tree x (n-1) a b_1) (Tree y (m-1) b_2 c) 
 
-{-@ demoteL :: s:Node3_2 -> {t:NEWavl | RkDiff s t 1 && potT2 s -2 == potT2 t } @-}
+{-@ demoteL :: s:Node3_2 -> {t:NEWavl | RkDiff s t 1 && potT2 s - 2 == potT2 t } @-}
 demoteL :: Tree a -> Tree a
 demoteL (Tree a n l r) = Tree a (n - 1) l r
 
-{-@ doubleDemoteL :: {s:Node3_1 | IsNode2_2 (right s) } -> {t:NEWavl | RkDiff s t 1 && potT2 s - 1 == potT2 t } @-}
-doubleDemoteL :: Tree a -> Tree a
-doubleDemoteL (Tree x n l (Tree y m rl rr)) = (Tree x (n-1) l (Tree x (m-1) rl rr))
-
-{-@ demoteR :: s:Node2_3 -> {t:NEWavl | RkDiff s t 1 && potT2 s -2 == potT2 t } @-}
+{-@ demoteR :: s:Node2_3 -> {t:NEWavl | RkDiff s t 1 && potT2 s - 2 == potT2 t } @-}
 demoteR :: Tree a -> Tree a
 demoteR (Tree a n l r) = Tree a (n - 1) l r
+
+{-@ doubleDemoteL :: {s:Node3_1 | IsNode2_2 (right s) } 
+          -> {t:NEWavl | RkDiff s t 1 && potT2 s - 1 == potT2 t } @-}
+doubleDemoteL :: Tree a -> Tree a
+doubleDemoteL (Tree x n l (Tree y m rl rr)) = (Tree x (n-1) l (Tree x (m-1) rl rr))
 
 {-@ doubleDemoteR :: {s:Node1_3 | IsNode2_2 (left s) } 
           -> {t:NEWavl | RkDiff s t 1 && potT2 s - 1 == potT2 t } @-}
@@ -210,7 +213,7 @@ doubleDemoteR (Tree x n (Tree y m ll lr) r) = Tree x (n-1) (Tree y (m-1) ll lr) 
 {-- 
 if Tree y is a
   leaf            -> potT2 s     == potT t
-  1,1 and no leaf -> potT2 s -1  == potT t
+  1,1 and no leaf -> potT2 s - 1 == potT t
   2,1             -> potT2 s + 2 == potT t
 --}
 {-@ rotateLeftD :: {s:Node3_1 | Child1 (rk (right s)) (right (right s)) 
