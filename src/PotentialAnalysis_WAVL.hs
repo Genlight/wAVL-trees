@@ -378,3 +378,56 @@ balRDel x n l r  | n <  rk r' + 3 = t
                   where 
                     t = RTick.step (tcost r) (pure (Tree x n l r')) 
                     r' = tval r
+
+-- Deletion functions
+{-@ delete :: a -> s:Wavl -> {t':Tick ({t:Wavl | ((EqRk s t) || (RkDiff s t 1)) }) | tcost t' >= 0 } @-}
+delete :: (Ord a) => a -> Tree a -> Tick (Tree a)
+delete _ Nil = pure Nil
+delete y (Tree x n l@Nil r@Nil)
+  | y < x     = balLDel x n l' r
+  | x < y     = balRDel x n l r'
+  | otherwise = merge y l r n 
+    where
+      l' = delete x l
+      r' = delete x r
+delete y (Tree x n l@Nil r@(Tree _ _ _ _))
+  | y < x     = balLDel x n l' r
+  | x < y     = balRDel x n l r'
+  | otherwise = merge y l r n 
+    where
+      l' = delete x l
+      r' = delete x r
+delete y (Tree x n l@(Tree _ _ _ _) r@Nil)
+  | y < x     = balLDel x n l' r
+  | x < y     = balRDel x n l r'
+  | otherwise = merge y l r n 
+    where
+      l' = delete x l
+      r' = delete x r
+delete y (Tree x n l@(Tree _ _ _ _) r@(Tree _ _ _ _))
+  | y < x     = balLDel x n l' r
+  | x < y     = balRDel x n l r'
+  | otherwise = merge y l r n 
+    where
+      l' = delete x l
+      r' = delete x r
+
+{-@ merge :: a -> l:Wavl -> r:Wavl -> {v:NodeRank | WavlRankN v l r } -> {t':Tick ({t:Wavl | EqRkN v t || RkDiffN v t 1 }) | tcost t' >= 0 } @-}
+merge :: a -> Tree a -> Tree a -> Int -> Tick (Tree a)
+merge _ Nil Nil _ = pure Nil
+merge _ Nil r _  = pure r
+merge _ l Nil _  = pure l
+merge x l r n    = balRDel y n l r'
+  where
+   (r', y)     = getMin r
+
+{-@  getMin :: s:NEWavl -> ({t':Tick ({t:Wavl | (EqRk s t) || (RkDiff s t 1) }) | tcost t' >= 0 }, _) @-} 
+getMin :: Tree a -> (Tick (Tree a), a)
+getMin (Tree x 0 Nil Nil) = (pure Nil, x)
+getMin (Tree x 1 Nil r@(Tree _ _ _ _)) = (pure r, x)
+getMin (Tree x n l@(Tree _ _ _ _) r@Nil) = ((balLDel x n l' r), x')
+  where
+    (l', x')             = getMin l
+getMin (Tree x n l@(Tree _ _ _ _) r) = ((balLDel x n l' r), x')
+  where
+    (l', x')             = getMin l
