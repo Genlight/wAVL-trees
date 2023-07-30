@@ -6,11 +6,23 @@
 module PotentialAnalysis_WAVL where
 
 import Prelude hiding (pure)
--- import Language.Haskell.Liquid.ProofCombinators
 import Language.Haskell.Liquid.RTick as RTick
+import Language.Haskell.Liquid.ProofCombinators 
 
 {-@ reflect singleton @-}
 {-@ reflect nil @-}
+
+{-@ reflect promoteL @-}
+{-@ reflect promoteR @-}
+{-@ reflect rotateDoubleLeft @-}
+{-@ reflect rotateDoubleRight @-}
+{-@ reflect rotateLeft @-}
+{-@ reflect rotateRight @-}
+
+{-@ reflect balL @-}
+{-@ reflect balR @-}
+{-@ reflect insert @-}
+
 
 {-@ data Tree [rk] a = Nil | Tree { val :: a, 
                                     rd :: {v:Int | v >= 0 }, 
@@ -95,9 +107,10 @@ isNode2_1 t = (rk (left t)) + 2 == (rk t) && (rk (right t)) + 1 == rk t && notEm
 isNode2_2 :: Tree a -> Bool
 isNode2_2 t = (rk (left t)) + 2 == (rk t) && (rk (right t)) + 2 == rk t && notEmptyTree (right t) && notEmptyTree (left t)
 
-
+{-@ inline is0ChildN @-}
 is0ChildN :: Int -> Tree a -> Bool 
 is0ChildN n t = (rk t) == n
+
 {-@ measure rk @-}
 {-@ rk :: t:Tree a -> {v:Rank | (not (notEmptyTree t) || v >= 0) && (notEmptyTree t || v== (-1))} @-}
 rk :: Tree a -> Int
@@ -251,10 +264,10 @@ rotateDoubleRightD (Tree x n (Tree y m ll (Tree z o lrl lrr)) r) = Tree z (o+2) 
 {- insert x t = c is
   2,2 -> must be EqRk, since this case isn't produced from bal*, therefore -> (isNode2_2 c) -> EqRk c t
   1,2 || 2,1  -> can be either a case "after" rebalancing or be a promote step but also for a promote step
-  1,1:  kann verschiedenes sein, aber unter allen Bedingungen gilt: (rk c > 0) && isNode1_1 c -> EqRk c t
+  1,1:  can have different causes, but for all cases it is true that: (rk c > 0) && isNode1_1 c -> EqRk c t
       Exception is the singleton-case: (rk == 0) && isNode1_1 c => RkDiff t c 1   
   
-  daraus ergibt sich die folgende Klausel für 1,1 / 2,2 (im Refinement für t): 
+  from that we conclude the following clauses for 1,1 / 2,2 (refining for t): 
     (isNode2_2 t || isNode1_1 t) ==> (RkDiff t s 0) <=> 
     not (isNode2_2 t || isNode1_1 t) || (RkDiff t s 0) <=> 
     (not (isNode2_2 t) && not (isNode1_1 t)) || (RkDiff t s 0) 
@@ -265,18 +278,33 @@ rotateDoubleRightD (Tree x n (Tree y m ll (Tree z o lrl lrr)) r) = Tree z (o+2) 
 
   And finally, I added IsWavlNode t which made it valid. The same was done to balL/R
   -> my reasoning: by bounding the case group explicitly by defining all possible cases LH is able to determine which cases are allowed and which aren't
+
+  refinement for potential annotation clauses: 
+  (RkDiff s t 1) ==> (potT (tval t') + tcost t' <= potT s)     <=> 
+   not (RkDiff s t 1) || (potT (tval t') + tcost t' <= potT s) <=> 
+    ((EqRk t s) || (potT (tval t') + tcost t' <= potT s)) 
+
+  and 
+  (EqRk t s) ==> (potT (tval t') + tcost t' <= potT s + 3)     <=> 
+   not (EqRk t s) || (potT (tval t') + tcost t' <= potT s + 3) <=> 
+   (RkDiff s t 1) || (potT (tval t') + tcost t' <= potT s + 3)
+
+  what we know / can exclude:
+  * we don't need to specify both potT and potT2 bc we know that the input and output of insert is a wavl tree, thus satisfying potT, which has the stronger constraint, i.e. compare balL/R 
+  * 
 -}
 {-@ insert :: (Ord a) => a -> s:Wavl -> t':{Tick ({t:NEWavl | (EqRk t s || RkDiff t s 1) 
           && (not (isNode2_2 t) || (EqRk t s)) 
           && ((not (isNode1_1 t && rk t > 0)) || EqRk t s) && IsWavlNode t }) 
-          | tcost t' >= 0  } @-}  -- && (potT (tval t') + tcost t' <= potT s + 5)
+          | tcost t' >= 0 
+          } @-}
 insert :: (Ord a) => a -> Tree a -> Tick (Tree a)
 insert x Nil = pure (singleton x)
 insert x t@(Tree v n l r) = case compare x v of
     LT -> insL
     GT -> insR
     EQ -> pure t
-    where 
+    where
       l' = insert x l
       r' = insert x r
       l'' = tval l'
@@ -288,19 +316,20 @@ insert x t@(Tree v n l r) = case compare x v of
 
 {-| 
     refinement part for l in balL (symm. for r in balR): 
-        ((rk l == 0 <=> isNode1_1 l) || isNode2_1 l || isNode1_2 l) <=>
-        (not (isNode1_1 l && rk l == 0) || isNode2_1 l || isNode1_2 l) <=>
-        ((not (isNode1_1 l) || rk l != 0) || isNode2_1 l || isNode1_2 l) <=>
+        ((rk l == 0 && isNode1_1 l) || isNode2_1 l || isNode1_2 l) <=>
+        not (isNode1_1 l) || not (rk l == 0) || isNode2_1 l || isNode1_2 l) <=>
+        (not (isNode1_1 l) || rk l != 0 || isNode2_1 l || isNode1_2 l) <=>
         (not (isNode1_1 l) || rk l != 0 || isNode2_1 l || isNode1_2 l)
 
     in words: 
-    I expect l to be a 0-child. In Order for that to be true, I define the allowed cases, i.e. either it can be a 1,2-Node where the 1-Child was
+    I expect l to be a 0-child. For that to be true, I define the allowed cases, i.e. either it can be a 1,2-Node where the 1-Child was
     a promote case. The other case (1,1-node) happens when l was in the previous step a singleton-case (insertion of the new node into the tree).
 
-    All other cases are not possible by theory, i.e. a 1,1-node which isn't a product of a singleton, can only be either a product of a rotation-case 
-    or 1,1-case which is in any case a Child node of 1 or greater
+    All other cases are not possible by the function definition, 
+    i.e. a 1,1-node which isn't a product of a singleton, can only be either a product of a rotation-case 
+        or 1,1-case which is in any case a Child node of 1 or greater
 
-    Thus we don't exclude any cases and the refinement is valid for WAVL trees. 
+    Thus we don't exclude any cases and the refinement is valid. 
 |-}
 {-@ balL :: x:a -> n:NodeRank -> {l:NEWavl | Is0ChildN n l && ((isNode1_1 l && rk l == 0) || isNode2_1 l || isNode1_2 l) }
           -> {r:Wavl | Is2ChildN n r} 
@@ -309,11 +338,9 @@ insert x t@(Tree v n l r) = case compare x v of
             && ((not (isNode1_1 t && rk t > 0)) || rk t == n) && IsWavlNode t 
             && (potT t + 1 <= potT2 (Tree x n l r) + 3) } @-} -- tcost == 1, amortisiert == 2
 balL :: a -> Int -> Tree a -> Tree a -> Tree a
-balL x n l r | rk l == rk r + 1 =  promoteL t
-             | rk l == rk r + 2 && (rk (right l) + 2) == rk l =  rotateRight t 
-             | rk l == rk r + 2 && (rk (right l) + 1) == rk l =  rotateDoubleRight t 
-              where 
-                t = Tree x n l r
+balL x n l r | rk l == rk r + 1 =  promoteL (Tree x n l r)
+             | rk l == rk r + 2 && (rk (right l) + 2) == rk l =  rotateRight (Tree x n l r) 
+             | rk l == rk r + 2 && (rk (right l) + 1) == rk l =  rotateDoubleRight (Tree x n l r)
 
 {-@ balR :: x:a -> n:NodeRank -> {l:Wavl | Is2ChildN n l } 
           -> {r:NEWavl | Is0ChildN n r && ((isNode1_1 r && rk r == 0) || isNode2_1 r || isNode1_2 r)}
@@ -322,15 +349,9 @@ balL x n l r | rk l == rk r + 1 =  promoteL t
             && ((not (isNode1_1 t && rk t > 0)) || rk t == n) && IsWavlNode t 
             && (potT t + 1 <= potT2 (Tree x n l r) + 3)}  @-} -- tcost == 1, amortisiert == 2
 balR :: a -> Int -> Tree a -> Tree a -> Tree a
-balR x n l r  | rk r == rk l + 1 =  promoteR t
-              | rk r == rk l + 2 && (rk (left r) + 2) == rk r =  rotateLeft t 
-              | rk r == rk l + 2 && (rk (left r) + 1) == rk r =  rotateDoubleLeft t 
-               where 
-                 t = Tree x n l r
-
-{-@ idWavl :: {v:NEWavl | Is1Child v (left v) } -> {t:NEWavl | rk v == rk t} @-}
-idWavl :: Tree a -> Tree a
-idWavl t = t
+balR x n l r  | rk r == rk l + 1 =  promoteR (Tree x n l r)
+              | rk r == rk l + 2 && (rk (left r) + 2) == rk r =  rotateLeft (Tree x n l r) 
+              | rk r == rk l + 2 && (rk (left r) + 1) == rk r =  rotateDoubleLeft (Tree x n l r) 
 
 {-- 
 (potT2 t' + 1 <= (potT2 (Tree x n (tval l) r')) + 3)
@@ -369,7 +390,7 @@ balLDel x n l r | n <= rk l' + 2 = t
           -> {t: Tick ({t':NEWavl | (rk t' == n || rk t' + 1 == n) 
           && (
             (potT2 t' + 1 <= potT2 (Tree x n l (tval r)) + 4) 
-          || (potT t'  + 1 <= potT2 (Tree x n l (tval r)) + 4)) 
+          || (potT t' + 1 <= potT2 (Tree x n l (tval r)) + 4)) 
           })| tcost t >= 0 } @-}
 balRDel :: a -> Int -> Tree a -> Tick (Tree a) -> Tick (Tree a)
 balRDel x _ Nil r@(Tick _ Nil) = RTick.step (tcost r) (pure (singleton x))
@@ -434,3 +455,21 @@ getMin (Tree x n l@(Tree _ _ _ _) r@Nil) = ((balLDel x n l' r), x')
 getMin (Tree x n l@(Tree _ _ _ _) r) = ((balLDel x n l' r), x')
   where
     (l', x')             = getMin l
+
+{- 
+  Proof of the common potential annotation
+
+proving the following clauses can be added to insert: 
+  (not (RkDiff (tval t') s 1) || (potT (tval t') + tcost t' <= potT s))
+  (not (EqRk (tval t') s)     || (potT (tval t') + tcost t' <= potT s + 3))
+-}
+
+-- {-@ maxPotTProof :: t:Wavl -> { potT t - potT (left t) - potT (right t) <= rk  } / [rk t] @-}
+-- insertPotTProof :: Tree a -> Proof
+-- insertPotTProof t = 
+
+-- {-@ insertPotTProof :: x:a -> t:Wavl -> { (not (RkDiff (tval (insert x t)) t 1) || (potT (tval (insert x t)) + tcost (insert x t) <= potT t)) && 
+--                                   (not (EqRk (tval (insert x t)) t)     || (potT (tval (insert x t)) + tcost (insert x t) <= potT t + 3))} @-}
+-- insertPotTProof :: a -> Tree a -> Proof
+-- insertPotTProof x t@Nil = trivial *** QED
+-- insertPotTProof x t@(Tree y n l r) = trivial *** QED 
