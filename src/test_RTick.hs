@@ -97,7 +97,7 @@ notEmptyTree :: Tree a -> Bool
 notEmptyTree Nil = False
 notEmptyTree _ = True
 
--- this is valid, but uses a workaround by declaring a another Tree b, which i check to be equal to r' and then don't use b
+-- this is valid, but uses a workaround by declaring another Tree b, which i check to be equal to r' and then don't use b
 {-@ tickWrapper :: x:a -> {n:Int | n >= 0} -> l:Tree a -> r:Tick ({r':Tree a |  tval r == r'}) -> {t:Tick ({t':Tree a | val t' == x && rk t' == n && left t' == l && tval r == right t'}) | tcost t == tcost r } @-}
 tickWrapper :: a -> Int -> Tree a -> Tick (Tree a) -> Tick (Tree a)
 tickWrapper x n l  r = (pure tree) `ap` (pure x) `ap` (pure n) `ap` (pure l) `ap` r

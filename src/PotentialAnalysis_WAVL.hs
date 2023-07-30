@@ -21,7 +21,7 @@ import Language.Haskell.Liquid.ProofCombinators
 
 {-@ reflect balL @-}
 {-@ reflect balR @-}
-{-@ reflect insert @-}
+-- {-@ reflect insert @-}
 
 
 {-@ data Tree [rk] a = Nil | Tree { val :: a, 
@@ -297,7 +297,7 @@ rotateDoubleRightD (Tree x n (Tree y m ll (Tree z o lrl lrr)) r) = Tree z (o+2) 
           && (not (isNode2_2 t) || (EqRk t s)) 
           && ((not (isNode1_1 t && rk t > 0)) || EqRk t s) && IsWavlNode t }) 
           | tcost t' >= 0 
-          } @-}
+          }  @-} -- / [rk (tval t')]
 insert :: (Ord a) => a -> Tree a -> Tick (Tree a)
 insert x Nil = pure (singleton x)
 insert x t@(Tree v n l r) = case compare x v of
@@ -311,8 +311,10 @@ insert x t@(Tree v n l r) = case compare x v of
       r'' = tval r'
       insL | rk l'' < n  = RTick.step (tcost l') (pure (Tree v n l'' r))
            | rk l'' == n = RTick.step (tcost l' + 1) (pure (balL v n l'' r)) 
+           | otherwise   = RTick.step (tcost l') (pure (Tree v n l'' r))
       insR | rk r'' < n  = RTick.step (tcost r') (pure (Tree v n l r''))
            | rk r'' == n = RTick.step (tcost r' + 1) (pure (balR v n l r''))
+           | otherwise   = RTick.step (tcost l') (pure (Tree v n l r''))
 
 {-| 
     refinement part for l in balL (symm. for r in balR): 
@@ -341,6 +343,7 @@ balL :: a -> Int -> Tree a -> Tree a -> Tree a
 balL x n l r | rk l == rk r + 1 =  promoteL (Tree x n l r)
              | rk l == rk r + 2 && (rk (right l) + 2) == rk l =  rotateRight (Tree x n l r) 
              | rk l == rk r + 2 && (rk (right l) + 1) == rk l =  rotateDoubleRight (Tree x n l r)
+             | otherwise = Tree x n l r
 
 {-@ balR :: x:a -> n:NodeRank -> {l:Wavl | Is2ChildN n l } 
           -> {r:NEWavl | Is0ChildN n r && ((isNode1_1 r && rk r == 0) || isNode2_1 r || isNode1_2 r)}
@@ -352,6 +355,7 @@ balR :: a -> Int -> Tree a -> Tree a -> Tree a
 balR x n l r  | rk r == rk l + 1 =  promoteR (Tree x n l r)
               | rk r == rk l + 2 && (rk (left r) + 2) == rk r =  rotateLeft (Tree x n l r) 
               | rk r == rk l + 2 && (rk (left r) + 1) == rk r =  rotateDoubleLeft (Tree x n l r) 
+              | otherwise = (Tree x n l r) 
 
 {-- 
 (potT2 t' + 1 <= (potT2 (Tree x n (tval l) r')) + 3)
