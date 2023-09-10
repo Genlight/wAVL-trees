@@ -300,7 +300,9 @@ to be inserted:
 {-@ insert :: (Ord a) => a -> s:Wavl -> t':{Tick ({t:NEWavl | (EqRk t s || RkDiff t s 1) 
           && (not (isNode2_2 t) || (EqRk t s)) 
           && ((not (isNode1_1 t && rk t > 0)) || EqRk t s) && IsWavlNode t }) 
-          | tcost t' >= 0           }  @-} -- / [rk (tval t')]
+          | tcost t' >= 0   
+           && (not (RkDiff s (tval t') 1) || (potT2 (tval t') + tcost t' <= potT2 s))
+                }  @-} -- / [rk (tval t')]
 insert :: (Ord a) => a -> Tree a -> Tick (Tree a)
 insert x Nil = pure (singleton x)
 insert x t@(Tree v n l r) = case compare x v of
