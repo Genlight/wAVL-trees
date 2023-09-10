@@ -49,15 +49,14 @@ tUnionL:: a -> int -> Tree a -> Tick (Tree a) -> Tree a -> Tick (Tick a)
 tUnionL x n (Tick s l) r = Tick s (Tree x n l r)
 ```
 
-But this seems to violate some more things especially your safety predicate, Def. 5.2 from the white paper "Liquidate Your Assets" [1].  
-
+But this seems to violate some more things especially a safety predicate, Def. 5.2 in the white paper "Liquidate Your Assets" [1].  
 
 # second try, using the "LList" approach
-The following approach are written down in [PotentialAnalysis_WAVL_2.hs](src/PotentialAnalysis_WAVL_2.hs)
+The following approach is written down in [PotentialAnalysis_WAVL_2.hs](src/PotentialAnalysis_WAVL_2.hs)
 
 The problem of "tUnionL" led me to believe that I needed something else. After coming across the section of "Refined Lazy Lists"  i thought i could make it work with the "LList" approach.
 
-I tried to use the approach Niki wrote in the white paper [1], i.e. using a data type with the Tick type: 
+I tried to use the approach Niki wrote in her white paper [1], i.e. using a data type with the Tick type: 
 
 ```haskell
 {-@ data Tree [rk] a = Nil | Tree { val :: a, 
@@ -66,7 +65,6 @@ I tried to use the approach Niki wrote in the white paper [1], i.e. using a data
                                     right :: RTick.Tick (Tree a) } @-} 
 data Tree a = Nil | Tree {val :: a, rd :: Int,  left :: (RTick.Tick (Tree a)), right :: (RTick.Tick (Tree a))} 
 ```
-
 but then I found that my introspection into the child states rank couldn't be done without further errors, i.e. the `rk` function cannot introspect the child bc the Type signature is not the same anymore.
 
 rank function:
@@ -77,7 +75,6 @@ rk :: Tree a -> Int
 rk Nil =  -1
 rk t@(Tree _ n _ _) = n
 ```
-
 
 ```haskell
 {-@ measure balanced @-}
