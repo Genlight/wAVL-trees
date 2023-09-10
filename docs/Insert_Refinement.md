@@ -127,7 +127,7 @@ mit:
 * _t_ ... Baum 
 
 
-wobei wir wissen, dass n durch den rank von dem INput (Tree t) gebunden ist: $n <= rk t$
+wobei wir wissen, dass n durch den rank von dem INput (Tree t) gebunden ist: $n <= \text{rk }t$
 
 Formel, mit der ich es versucht habe: 
 
