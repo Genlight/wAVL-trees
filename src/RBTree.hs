@@ -2,15 +2,45 @@
 {-@ LIQUID "--ple" @-}
 {-@ LIQUID "--bscope" @-}
 
+{- 
+    simple tree function which colours each node either Red or Black
+    for our potential analysis we say that each black node has potential of 1 and each red node potential of 0
+    
+    test function: 
+        1. go down the right path, i.e. selecting always the right child node
+        2. if the last node (leaf) is Black switch it to red, else leave it unchanged
 
--- Die test Funktion steigt nun immer in das rechte Kind ab. Dann bauen
--- wir den Baum wieder rekursiv zusammen wie in wavl-insert. Wenn wir
--- ein Blatt erreichen ändern wir die Farbe von schwarz auf rot, das hat
--- Kosten 1. Wenn die Farbe rot ist, machen wir nichts. Beim aufsteigen
--- checken wir immer, ob sich die Farbe des Teilbaums beim rekursiven
--- Aufruf geändert hat. Wenn sie sich geändert hat, machen wir das selbe
--- wie beim Blatt Fall. Wenn sie sich nicht geändert hat machen wir nichts.
+    this test function shall showcase a simplified function of the more complex wavl-insert case
 
+    check function: 
+        symbolises our "stop" case analog to a rotate case in a wavl tree
+        this step showcases our problem to prove that this stop case only happens exactly once during the rebuilding of the tree
+
+    checkT:     
+        check function + using RTick Monad
+        we want to show that this case incurs a cost of 2 (nothing special about that) but does not change the potential
+        By this choice we want to show that the potential is changed at each step by -1 until the stop case. Further we incur cost +1 at each step
+        resulting in an amortised cost at each step (not including the stop case) of 0. 
+
+    testT: 
+        test function + using RTick Monad
+        We want to show that there is only one stop case, thus in total we incur an amortized cost of 2 (stop case + all other cases).
+
+        to prove (as a function refinement): 
+            potT (tval v) + tcost v <= potT (tval t) + tcost t + 2
+        
+------------------------------
+
+    Deutsch - German
+    
+    Die test Funktion steigt nun immer in das rechte Kind ab. Dann bauen
+    wir den Baum wieder rekursiv zusammen wie in wavl-insert. Wenn wir
+    ein Blatt erreichen ändern wir die Farbe von schwarz auf rot, das hat
+    Kosten 1. Wenn die Farbe rot ist, machen wir nichts. Beim aufsteigen
+    checken wir immer, ob sich die Farbe des Teilbaums beim rekursiven
+    Aufruf geändert hat. Wenn sie sich geändert hat, machen wir das selbe
+    wie beim Blatt Fall. Wenn sie sich nicht geändert hat machen wir nichts.
+-}
 
 module RBTree where 
 
@@ -84,7 +114,7 @@ checkT :: Col -> Tick(Tree a) -> Tick (Tree a)
 checkT c t 
     | rk (right (tval t)) == c = t 
     | rk (right ( tval t)) /= c && rk (tval t) == R = RTick.step 2 t 
-    | rk (right (tval t)) /= c && rk (tval t) == B = RTick.wmap red t
+    | rk (right (tval t)) /= c && rk (tval t) == B  = RTick.wmap red t
 
 {-@ red :: {t:Tree a | not empty t && rk t == B} -> {v:Tree a | rk v == R && potT t == potT v + 1 && ht t == ht v } @-}
 red :: Tree a -> Tree a
