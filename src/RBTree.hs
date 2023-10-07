@@ -63,8 +63,8 @@ check :: Col -> Tree a -> Tree a
 check c Nil = Nil
 check c t@(Tree a b h l r) 
     | rk r == c = t -- no change
-    | rk r /= c && b == R = t -- this is the "rebalancing" step we are looking for
-    | otherwise = Tree a R h l r  -- change B to R, incur cost of 1 and pot - 1
+    | rk r /= c && b == R = t -- this is the "rebalancing" step we are looking for, set cost to 2, no pot change
+    | otherwise = red t  -- change B to R, incur cost of 1 and pot - 1
 
  -- do the checking which changes colours to red if a change happened in r
 testT :: Tree a -> Tick (Tree a)
