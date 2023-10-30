@@ -44,7 +44,7 @@
 
 module RBTree where 
 
-import Prelude hiding (pure, (<*>), (>>=), (<$>))
+import Prelude hiding (pure, (<*>), (>>=), (<$>), liftM2)
 import Language.Haskell.Liquid.RTick as RTick
 
 data Col = R | B deriving (Eq, Show)
@@ -60,6 +60,14 @@ data Tree a = Nil | Tree { val :: a, rd :: Col, ht1:: Int, left :: (Tree a), rig
 {-@ type ChildT a T = {v:Tree a | ht v + 1 <= T } @-}
 {-@ type Nat = {v:Int | v >= 0} @-}
 {-@ type Pos = {v:Int | v >= 1} @-}
+{-@ type EqT a T = {v:Tree a | not empty v && ht v == ht T && ht (right v) == ht (right T)} @-}
+{-@ type EqCT a T = {v:EqT a T | rk T == rk v} @-}
+
+{-@ type EqTT a T = Tick ({v:Tree a | not empty v && ht v == ht T && ht (right v) == ht (right T) && ht (right v) < ht v && ht (right T) < ht T}) @-}
+{-@ type EqCTT a T = Tick ({v:EqT a T | rk T == rk v}) @-}
+{-@ type TTp T = {v:EqTT a T | potT (tval v) + tcost v <= potT t + 2 } @-}
+{-@ type NETree = {v:Tree a | not empty t} @-}
+{-@ type NETreeR = {t:NETree | not empty (right t)} @-}
 
 {-@ measure potT @-}
 {-@ potT :: t:Tree a -> Nat / [ht t] @-}
@@ -85,52 +93,45 @@ rk :: Tree a -> Col
 rk Nil = R
 rk t@(Tree _ c _ _ _) = c
 
-{-@ test :: t:Tree a -> {v:Tree a | ht v == ht t }@-}
+{-@ test :: t:Tree a -> {v:Tree a | ht v == ht t } @-}
 test :: Tree a -> Tree a
 test Nil = Nil
 test t@(Tree x c h l r) 
-    | empty l && empty r && c == B = red t -- t is leaf, cost of 1 is incurred, and pot - 1
-    | empty l && empty r && c == R = Tree x c h l r -- t is leaf, no cost 
+    | empty r && c == B = red t -- t is leaf, cost of 1 is incurred, and pot - 1
+    | empty r && c == R = Tree x c h l r -- t is leaf, no cost 
     | otherwise = check (rk r) (Tree x c h l (test r)) -- do the checking which changes colours to red if a change happened in r
 
-{-@ check :: Col -> t:Tree a -> {v:Tree a | ht t == ht v && ht(right v) == ht (right t)} @-}
+{-@ check :: Col -> {t:Tree a | not empty t} -> v:EqT a t @-}
 check :: Col -> Tree a -> Tree a
-check c Nil = Nil
 check c t@(Tree a b h l r) 
     | rk r == c = t -- no change
     | rk r /= c && b == R = t -- this is the "rebalancing" step we are looking for, set cost to 2, no pot change
     | otherwise = red t  -- change B to R, incur cost of 1 and pot - 1
 
- -- do the checking which changes colours to red if a change happened in r
-{-@ testT :: {t:Tree a | not empty t && ht (right t) < ht t} 
-                    -> {v:Tick (
-                        {v':Tree a | ht (right v') == ht (right t) && ht v' == ht t}) | 
-                        (ht (right (tval v)) < ht (tval v)) && 
-                        ht (tval v) == ht t && 
-                        ht (right(tval v)) == ht (right t)} 
-                    / [ht t] @-}
+-- do the checking which changes colours to red if a change happened in r
+{-@ testT :: {t:Tree a | not empty t} -> v:EqTT a t @-} -- / [ht t]
 testT :: Tree a -> Tick (Tree a)
--- testT Nil = RTick.return Nil
 testT t@(Tree x c h l r)
-    | empty l && empty r && c == B = RTick.wait (red t) -- t is leaf, cost of 1 is incurred, and pot - 1
-    | empty l && empty r && c == R = RTick.return (Tree x c h l r) -- t is leaf, no cost 
-    | empty r = RTick.return (Tree x c h l r) -- t is leaf, no cost 
-    | otherwise = Tick (tcost (testT r)) (check (rk r) (Tree x c h l (tval (testT r))))
-
--- {-@ help :: {t:Tree a | not (empty t) } -> {v:Tick ({v': Tree a | not empty v' && ht t == ht v' && ht (right v') < ht v'}) | ht (right (tval v)) < ht (tval v) } @-}
+    | not (empty r) = RTick.step (tcost ((testT r))) (checkT (rk r) (Tree x c h l (tval (testT r))))
+    | c == B = RTick.wait (red t) -- t is leaf, cost of 1 is incurred, and pot - 1
+    | c == R = RTick.return (Tree x c h l r) -- t is leaf, no cost 
+    
+-- {-@ help :: t:NETreeR -> v:EqTT a t @-}
 -- help :: Tree a -> Tick (Tree a)
--- help (Tree x c h l r) = Tick (tcost (testT r)) (Tree x c h l (tval (testT r)))
+-- help t@(Tree x c h l r) = RTick.step (tcost (r')) (checkT (rk r) (Tree x c h l (tval (r'))))
+--     where r' = testT r
+
 
 --  | potT (tval v) + tcost v <= potT t + 2 
-{-@ checkT :: Col -> t:Tree a -> v:Tick (v':Tree a) @-}
+{-@ checkT :: Col -> {t:Tree a | not empty t} -> v:EqTT a t @-}
 checkT :: Col -> Tree a -> Tick (Tree a)
-checkT _ Nil = pure Nil 
+-- checkT _ Nil = pure Nil 
 checkT c t 
     | rk (right t) /= c && not (rk t == B) = RTick.step 2 (pure t) 
     | rk (right t) /= c && rk (t) == B = RTick.wmap red (pure t)
     | otherwise = pure t
 
-{-@ red :: {t:Tree a | not empty t && rk t == B } -> {v:Tree a | rk v == R && potT t == potT v + 1 && ht t == ht v && right t == right v } @-}
+{-@ red :: {t:Tree a | not empty t && rk t == B } -> {v:EqT a t | rk v == R && potT t == potT v + 1 } @-}
 red :: Tree a -> Tree a
 red t@(Tree a _ h l r) = Tree a R h l r
 
