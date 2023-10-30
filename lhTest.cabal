@@ -24,8 +24,8 @@ library
     --   AVL,
       -- WAVL,
       -- PotentialAnalysis_WAVL
-      -- RBTree, 
-      RBTree_v2
+      RBTree 
+      -- RBTree_v2
       -- BinomialHeap
     -- PopPush
   hs-source-dirs:
