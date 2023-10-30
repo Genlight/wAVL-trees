@@ -151,7 +151,7 @@ singleton a = Tree a 0 Nil Nil
 
 -- potential analysis for insertion
 {-@ measure potT @-}
-{-@ potT :: t:Wavl -> Int @-}
+{-@ potT :: t:Wavl -> {v:Int | v >= 0} @-}
 potT :: Tree a -> Int
 potT Nil      = 0
 potT (Tree _ n l r) 
@@ -160,7 +160,7 @@ potT (Tree _ n l r)
   | otherwise = potT l + potT r                                
 
 {-@ measure potT2 @-}
-{-@ potT2 :: t:AlmostWavl -> Int @-}
+{-@ potT2 :: t:AlmostWavl -> {v:Int | v >= 0} @-}
 potT2 :: Tree a -> Int 
 potT2 Nil = 0
 potT2 t@(Tree _ n l r)
@@ -301,7 +301,8 @@ to be inserted:
           && (not (isNode2_2 t) || (EqRk t s)) 
           && ((not (isNode1_1 t && rk t > 0)) || EqRk t s) && IsWavlNode t }) 
           | tcost t' >= 0   
-           && (not (RkDiff s (tval t') 1) || (potT2 (tval t') + tcost t' <= potT2 s))
+             && (not (RkDiff s (tval t') 1) || (potT2 (tval t') + tcost t' <= potT2 s))
+             && (not (EqRk (tval t') s)     || (potT2 (tval t') + tcost t' <= potT2 s + 2))
                 }  @-} -- / [rk (tval t')]
 insert :: (Ord a) => a -> Tree a -> Tick (Tree a)
 insert x Nil = pure (singleton x)
@@ -314,33 +315,55 @@ insert x t@(Tree v n l r) = case compare x v of
       r' = insert x r
       l'' = tval l'
       r'' = tval r'
-      t' = Tree 
-      insL | rk l'' < n  = RTick.step (tcost l') (pure (idWavl v n l'' r))
-           | is0ChildN n l'' && rk l'' == rk r + 1 = RTick.step (tcost l' + 1) (pure (promoteL (idAlmostWavlL v n l'' r))) 
+      insL | rk (tval l') < n  = RTick.step (tcost l') (pure (idWavlT v n l' r l))
+           | is0ChildN n l'' && rk l'' == rk r + 1 = RTick.step (tcost l' + 1) (pure (promoteL (Tree v n l'' r))) 
            | is0ChildN n l'' = RTick.step (tcost l') (pure (balL v n l'' r)) 
-      insR | rk r'' < n  = RTick.step (tcost r') (pure (idWavl v n l r''))
-           | is0ChildN n r'' && rk r'' == rk l + 1 = RTick.step (tcost r' + 1) (pure (promoteR (idAlmostWavlR v n l r''))) 
+      insR | rk r'' < n  = RTick.step (tcost r') (pure (Tree v n l r'')) -- (idWavlT v n l' r l)
+           | is0ChildN n r'' && rk r'' == rk l + 1 = RTick.step (tcost r' + 1) (pure (promoteR (Tree v n l r''))) 
            | is0ChildN n r'' = RTick.step (tcost r') (pure (balR v n l r''))
+
+-- idWavlT :: Int -> Int -> a -> Int -> Tree a -> Tree a -> Tree a
+-- idWavlT _ _ x n l r = idWavl x n l r
+
+{-@ idWavlT ::  x:a -> n:NodeRank -> l':Tick({l:Wavl | rk l < n && n <= rk l + 2})
+          -> {r:Wavl | rk r < n && n <= rk r + 2 } 
+          -> {prev:Wavl | (potT (tval l')) + tcost l' <= (potT prev) + 2 }
+          -> {t:NEWavl | potT t + tcost l' <= potT (Tree x n prev r) + 2 } @-} 
+idWavlT :: a -> Int -> Tick (Tree a) -> Tree a -> Tree a ->  Tree a
+idWavlT x n l r _ = idWavl x n (tval l) r
+
+-- {-@ idWavlTR ::  x:a -> n:NodeRank -> {l:Wavl | rk l < n && n <= rk l + 2}
+--           -> r':Tick ({r:Wavl | rk r < n && n <= rk r + 2 })
+--           -> {prev:Wavl | (potT (tval r')) + tcost r' <= (potT prev) + 2 }
+--           -> {t:NEWavl | potT t + tcost r' <= potT (Tree x n l prev) + 2 } @-} 
+-- idWavlTR :: a -> Int -> Tick (Tree a) -> Tree a -> Tree a ->  Tree a
+-- idWavlTR x n l r _ = idWavl x n l (tval r)
 
 {-
   idWavl :: check for tree 'sanity' of tuples n l r
   s. description in docs/idWavl.md
 -} 
+{-@ reflect idWavl @-}
 {-@ idWavl :: x:a -> n:NodeRank -> {l:Wavl | rk l < n && n <= rk l + 2} 
           -> {r:Wavl | rk r < n && n <= rk r + 2 } 
           -> {t:NEWavl | (not (not notEmptyTree l && not notEmptyTree r) || (rk t == rk l + 1 && rk t == rk r + 1 && rk t == 0)) 
-                      && ((not notEmptyTree l && not notEmptyTree r)     || (rk t == n && left t==l && right t == r)) } @-}
+                      && ((not notEmptyTree l && not notEmptyTree r)     || (rk t == n && left t==l && right t == r)) 
+                      
+                      } @-}
 idWavl :: a -> Int -> Tree a -> Tree a -> Tree a
 idWavl x n l r
     | notEmptyTree r = idWavlR x n l r
     | notEmptyTree l = idWavlL x n l r
-    | not (notEmptyTree l) && not (notEmptyTree r) = singleton x
+    | otherwise = singleton x -- not . notEmptyTree l && not . notEmptyTree r
 
+
+{-@ reflect idWavlL @-}
 {-@ idWavlL :: x:a -> n:NodeRank -> {l:NEWavl | rk l < n && n <= rk l + 2} -> {r:Wavl | rk r < n && n <= rk r + 2 } 
           -> {t:NEWavl | val t == x && rk t == n && left t==l && right t == r } @-}
 idWavlL :: a -> Int -> Tree a -> Tree a -> Tree a
 idWavlL x n l r = Tree x n l r
 
+{-@ reflect idWavlR @-}
 {-@ idWavlR :: x:a -> n:NodeRank -> {l:Wavl | rk l < n && n <= rk l + 2} 
           -> {r:NEWavl | rk r < n && n <= rk r + 2 } -> {t:NEWavl | rk t == n && left t==l && right t == r } @-}
 idWavlR :: a -> Int -> Tree a -> Tree a -> Tree a
