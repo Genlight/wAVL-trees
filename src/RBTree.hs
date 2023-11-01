@@ -109,13 +109,16 @@ check c t@(Tree a b h l r)
     | otherwise = red t  -- change B to R, incur cost of 1 and pot - 1
 
 -- do the checking which changes colours to red if a change happened in r
-{-@ testT :: t:NETree -> v:EqTTa a t / [ht t] @-} -- EqTTa does not hold
+{-@ testT :: t:NETree -> v:EqTT a t / [ht t] @-} -- EqTTa does not hold
 testT :: Tree a -> Tick (Tree a)
 testT t@(Tree x c h l Nil) 
     | c == B = RTick.wait (red t) -- t is leaf, amortised cost of 0
     | c == R = pure t -- t is leaf, no cost 
-testT t@(Tree x c h l r) = RTick.step (tcost (r')) (checkT (rk r) (Tree x c h l (tval (r'))))
-    where r' = testT r
+testT t@(Tree x c h l r) = let 
+            r' = testT r
+            v = checkT (rk r) (Tree x c h l (tval (r')))
+        in RTick.step (tcost (r')) v
+
     
 -- {-@ help :: t:NETreeR -> v:EqTT a t / [ht t] @-}
 -- help :: Tree a -> Tick (Tree a)
