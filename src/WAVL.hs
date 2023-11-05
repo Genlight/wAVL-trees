@@ -257,7 +257,7 @@ balLDel :: a -> Int -> Tree a -> Tree a -> Tree a
 balLDel x _ Nil Nil  = singleton x
 balLDel x n l r | n <= (rk l) + 2 = t 
                 | n == (rk l) + 3 && (rk r) + 2 == n = demoteL t 
-                | n == (rk l) + 3 && (rk r) + 1 == n && rk (left r) + 2 == (rk r) && (rk (right r)) + 2 == rk r = doubleDemoteL t
+                 | n == (rk l) + 3 && (rk r) + 1 == n && rk (left r) + 2 == (rk r) && (rk (right r)) + 2 == rk r = doubleDemoteL t
                 | n == (rk l) + 3 && (rk r) + 1 == n && rk (right r) + 1 == rk r = rotateLeftD t
                 | n == (rk l) + 3 && (rk r) + 1 == n && rk (right r) + 2 == rk r && rk (left r) + 1 == rk r = rotateDoubleLeftD t
                   where

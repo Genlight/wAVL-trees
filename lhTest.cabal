@@ -23,8 +23,8 @@ library
     --   WAVL_With_Rankdiff,     
     --   AVL,
       -- WAVL,
-      -- PotentialAnalysis_WAVL
-      RBTree 
+      PotentialAnalysis_WAVL
+      -- RBTree 
       -- RBTree_v2
       -- BinomialHeap
     -- PopPush
