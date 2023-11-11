@@ -201,6 +201,16 @@ potT2 t@(Tree _ n l r)
   | rk l + 3 == n && rk r + 2 == n          = 2 + potT l + potT r    -- 3,2-Node
   | otherwise = potT l + potT r
 
+{-@ inline amortized @-}
+{-@ amortized :: Tick (Wavl) -> Wavl -> Bool @-}
+amortized :: Tick (Tree a) -> Tree a -> Bool
+amortized t s = pot1 t + tcost t <= potT s
+
+{-@ inline amortized1 @-}
+{-@ amortized1 :: Tick (Wavl) -> Wavl -> Bool @-}
+amortized1 :: Tick (Tree a) -> Tree a -> Bool
+amortized1 t s = pot1 t + tcost t <= potT s + 2
+
 {-@ inline pot1 @-}
 {-@ pot1 :: Tick (t:Wavl) -> {v:Int | v >= 0} @-}
 pot1 :: Tick (Tree a) -> Int
@@ -370,15 +380,6 @@ insert x t@(Tree v n l r) = case compare x v of
            | is0ChildN n r''                        = RTick.fmap balR (treeR v n l r')
 
 
-{-@ inline amortized @-}
-{-@ amortized :: Tick (Wavl) -> Wavl -> Bool @-}
-amortized :: Tick (Tree a) -> Tree a -> Bool
-amortized t s = pot1 t + tcost t <= potT s
-
-{-@ inline amortized1 @-}
-{-@ amortized1 :: Tick (Wavl) -> Wavl -> Bool @-}
-amortized1 :: Tick (Tree a) -> Tree a -> Bool
-amortized1 t s = pot1 t + tcost t <= potT s + 2
 
 -- TRUSTED CODE, we assume that the costs are given from the child to the parent
 {-@ type TreeR n l r = {v:Tick (TreeR1 n l r) | tcost r == tcost v} @-}
