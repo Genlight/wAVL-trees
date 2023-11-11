@@ -1,62 +1,15 @@
 in commit 1b9232db7e327e3d4b47d0f9a0331b469d849321 we had the problem, 
 
 that the condition `rk (tval r')` in the function `insert` was not propagated to the expression and we got the LH unsafe message: 
-```
+```bash
 Liquid Type Mismatch
 .
 The inferred type
-  VV : {v : (PotentialAnalysis_WAVL.Tree a) | balanced v
-                                              && notEmptyTree v
-                                              && notEmptyTree v
-                                                 || rk v == (-1)
-                                              && (notEmptyTree (left v)
-                                                  && rk (left v) + 1 == rk v
-                                                  && rk (right v) + 2 == rk v)
-                                                 || ((notEmptyTree (right v)
-                                                      && rk (left v) + 2 == rk v
-                                                      && rk (right v) + 1 == rk v)
-                                                     || ((notEmptyTree (left v)
-                                                          && notEmptyTree (right v)
-                                                          && rk (left v) + 2 == rk v
-                                                          && rk (right v) + 2 == rk v)
-                                                         || (rk (left v) + 1 == rk v
-                                                             && rk (right v) + 1 == rk v)))
-                                              && not (notEmptyTree v)
-                                                 || rk v >= 0
-                                              && not (notEmptyTree (left v)
-                                                      && notEmptyTree (right v)
-                                                      && rk (left v) + 2 == rk v
-                                                      && rk (right v) + 2 == rk v)
-                                                 || rk r == rk v
-                                              && not (rk (left v) + 1 == rk v
-                                                      && rk (right v) + 1 == rk v
-                                                      && rk v > 0)
-                                                 || rk r == rk v
-                                              && rk r == rk v
-                                                 || rk v - rk r == 1
-                                              && ht v >= (-1)
-                                              && potT v >= 0
-                                              && potT2 v >= 0
-                                              && rk v >= (-1)}
-.
+  VV : {v : (PotentialAnalysis_WAVL.Tree a) | balanced v  ... }
+...
+
 is not a subtype of the required type
   VV : {VV : (PotentialAnalysis_WAVL.Tree a) | n > rk VV}
-.
-in the context
-  r : {r : (PotentialAnalysis_WAVL.Tree a) | notEmptyTree r
-                                             || rk r == (-1)
-                                             && not (notEmptyTree r)
-                                                || rk r >= 0
-                                             && ht r >= (-1)
-                                             && potT r >= 0
-                                             && potT2 r >= 0
-                                             && rk r >= (-1)
-                                             && n <= rk r + 3
-                                             && rk r <= n}
-   
-  n : {n : GHC.Types.Int | n >= 0}
-Constraint id 175
-
 ```
 
 which seems ridiculous bc the pattern for insR was like this: 
@@ -79,6 +32,30 @@ Here, we have again the problem that LH and specifically the RTick framework is 
 {-@ type ChildB K = {v:Wavl | Is2ChildN K v } @-}
 ```
 
-### things i tried
+## things i tried
 
+### let instead of where
 I thought that maybe exchanging `r'` in the `where` clause for a similar `let` construct would give me more control over `r'` constraints but similar issues arise there. 
+
+### connecting tval l with itself
+I tried to set `tval l == l'` where `l'` was `tval l` but this did no good and returned the error: 
+```bash
+is not a subtype of the required type
+  VV : {VV : (PotentialAnalysis_WAVL.Tree a) | rk (tval (insert x l)) == rk VV }
+
+```
+
+# conclusion: what worked
+
+In the end, the trick was to instead adding the refinement on the inner Tree level we needed to add it to the Tick wrapper. 
+Instead of
+```Haskell
+ 
+```
+
+we needed this: 
+```Haskell
+treeLW1 :: x:a -> n:NodeRank -> {l:Tick(l':NEWavl) | is2ChildN n (tval l) } -> r:ChildB n  
+          -> {v:Tick ({t:NEWavl | right t == r && Is2Child t (tval l) && rk t == n && IsWavlNode t && potT t >= pot1 l + potT r}) | tcost l == tcost v
+           }
+```

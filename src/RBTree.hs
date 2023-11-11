@@ -106,7 +106,7 @@ test Nil = Nil
 test t@(Tree x c h l r) 
     | empty r && c == B = red t -- t is leaf, cost of 1 is incurred, and pot - 1
     | empty r && c == R = Tree x c h l r -- t is leaf, no cost 
-    | otherwise = undefined -- check (rk r) (Tree x c h l (test r)) -- do the checking which changes colours to red if a change happened in r
+    | otherwise = check (rk r) (Tree x c h l (test r)) -- do the checking which changes colours to red if a change happened in r
 
 {-@ check :: Col -> t:NETree -> v:EqT t @-}
 check :: Col -> Tree a -> Tree a
