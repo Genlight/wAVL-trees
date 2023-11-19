@@ -93,3 +93,121 @@ im insert refinement mittels implikation:
 ```haskell
 ... && (not (is0ChildN n r') || (isPromoteCase r')) ...
 ```
+s, dazu auch den Kommentar in [insert_Refinement.md](../insert_Refinement.md)
+
+## Versuch 4: insRi
+Der versuch zielt darauf ab, im insert bereits den neuen Node zusammenzubauen: 
+
+```haskell
+insert x t@(Tree v n l r) = case compare x v of
+    LT -> undefined -- insL
+    GT -> insRi tr
+    EQ -> pure t
+    where
+      l' = insert x l
+      r' = insert x r
+      tl = treeL v n l' r
+      tr = treeR v n l r'
+```
+
+Grundgedanke ist, dass wir den Constraint input zu `insRi` schwächen wollen (i.e. nur die Out Constraint von `TreeR` als input) und dann einen output refinement durch die bereits sehr stark refined-en funktionen balR und promoteR erzielen.
+Dies ist aber schon bei der Übernahme des Dateitypen gescheitert: 
+```haskell
+{-@ insRi :: s:TreeRi -> EqTT s @-}
+insRi :: Tick(Tree a) -> Tick(Tree a)
+insRi  = undefined
+```  
+
+mit
+```haskell
+{-@ type TreeRi = Tick ({t:NEAlmostWavl | notEmptyTree (right t) 
+          && (not (is0Child t (right t)) || (isPromoteCase (right t)))}) @-}
+
+{-@ type EqTT s = {t:Tick ({t:NEWavl | (eqRk t (tval s) || rkDiff (tval s) t 1) 
+          && (not (isNode2_2 t) || (eqRk t (tval s)))
+          && (not (rkDiff (tval s) t 1) || (isPromoteCase t)) 
+          && ((not (isNode1_1 t && rk t > 0)) || eqRk t (tval s)) }) | tcost t >= 0 } @-}
+```
+
+Mit dem angezeigten Fehler: 
+```haskell
+Liquid Type Mismatch
+.
+The inferred type
+  VV : {v' : (PotentialAnalysis_WAVL.Tree a) | balanced v'
+                                               && notEmptyTree v'
+                                               && notEmptyTree v'
+                                                  || rk v' == (-1)
+                                               && not (notEmptyTree v')
+                                                  || rk v' >= 0
+                                               && not (notEmptyTree (left v')
+                                                       && notEmptyTree (right v')
+                                                       && rk (left v') + 2 == rk v'
+                                                       && rk (right v') + 2 == rk v')
+                                                  || rk v' == rk (tval (treeR v n l (insert x r)))
+                                               && not (rk (left v') + 1 == rk v'
+                                                       && rk (right v') + 1 == rk v'
+                                                       && rk v' > 0)
+                                                  || rk v' == rk (tval (treeR v n l (insert x r)))
+                                               && not (rk v' - rk (tval (treeR v n l (insert x r))) == 1)
+                                                  || ((rk v' == 0
+                                                       && rk (left v') + 1 == rk v'
+                                                       && rk (right v') + 1 == rk v')
+                                                      || ((notEmptyTree (left v')
+                                                           && rk (left v') + 1 == rk v'
+                                                           && rk (right v') + 2 == rk v')
+                                                          || (notEmptyTree (right v')
+                                                              && rk (left v') + 2 == rk v'
+                                                              && rk (right v') + 1 == rk v')))
+                                               && rk v' == rk (tval (treeR v n l (insert x r)))
+                                                  || rk v' - rk (tval (treeR v n l (insert x r))) == 1
+                                               && ht v' >= (-1)
+                                               && potT v' >= 0
+                                               && potT2 v' >= 0
+                                               && rk v' >= (-1)}
+.
+is not a subtype of the required type
+  VV : {VV : (PotentialAnalysis_WAVL.Tree a) | rk VV == rk ?a
+                                               || rk VV - rk ?a == 1}
+.
+in the context
+  l : {l : (PotentialAnalysis_WAVL.Tree a) | notEmptyTree l
+                                             || rk l == (-1)
+                                             && not (notEmptyTree l)
+                                                || rk l >= 0
+                                             && ht l >= (-1)
+                                             && potT l >= 0
+                                             && potT2 l >= 0
+                                             && rk l >= (-1)
+                                             && n <= rk l + 3
+                                             && rk l <= n}
+   
+  v : a
+   
+  x : a
+   
+  r : {r : (PotentialAnalysis_WAVL.Tree a) | notEmptyTree r
+                                             || rk r == (-1)
+                                             && not (notEmptyTree r)
+                                                || rk r >= 0
+                                             && ht r >= (-1)
+                                             && potT r >= 0
+                                             && potT2 r >= 0
+                                             && rk r >= (-1)
+                                             && n <= rk r + 3
+                                             && rk r <= n}
+   
+  ?a : {?a : (PotentialAnalysis_WAVL.Tree a) | balanced ?a
+                                               && notEmptyTree ?a
+                                                  || rk ?a == (-1)
+                                               && not (notEmptyTree ?a)
+                                                  || rk ?a >= 0
+                                               && ht ?a >= (-1)
+                                               && potT ?a >= 0
+                                               && potT2 ?a >= 0
+                                               && rk ?a >= (-1)}
+   
+  n : {n : GHC.Types.Int | n >= 0}
+Constraint id 63
+
+```

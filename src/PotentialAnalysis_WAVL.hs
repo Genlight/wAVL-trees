@@ -33,7 +33,7 @@ data Tree a = Nil | Tree { val :: a, rd :: Int, left :: (Tree a), right :: (Tree
 {-@ type Wavl = {v: Tree a | balanced v } @-}
 {-@ type NEWavl = {v:Wavl | notEmptyTree v } @-}
 {-@ type ChildT a K = {v:Tree a | rk v <= K  && K <= rk v + 3} @-}
-{-@ type ChildW K = {v:Wavl | rk v <= K  && K <= rk v + 3} @-}
+{-@ type ChildW K = {v:Wavl | rk v <= K  && K <= rk v + 2} @-}
 {-@ type ChildB K = {v:Wavl | Is2ChildN K v } @-}
 {-@ type AlmostWavl = {t:Tree a | (not (notEmptyTree t)) || (balanced (left t) && balanced (right t)) } @-}
 {-@ type Rank = {v:Int | v >= -1} @-}
@@ -44,10 +44,15 @@ data Tree a = Nil | Tree { val :: a, rd :: Int, left :: (Tree a), right :: (Tree
           && (not (isNode2_2 t) || (eqRk t s))
           && (not (rkDiff s t 1) || (isPromoteCase t)) 
           && ((not (isNode1_1 t && rk t > 0)) || eqRk t s) }) | tcost t >= 0 } @-} -- IsWavlNode t && (not (isNode2_2nNil s) || (eqRk t s)) 
+{-@ type EqTT s = {t:Tick ({t:NEWavl | (eqRk t (tval s) || rkDiff (tval s) t 1) 
+          && (not (isNode2_2 t) || (eqRk t (tval s)))
+          && (not (rkDiff (tval s) t 1) || (isPromoteCase t)) 
+          && ((not (isNode1_1 t && rk t > 0)) || eqRk t (tval s)) }) | tcost t >= 0 } @-} -- IsWavlNode t && (not (isNode2_2nNil s) || (eqRk t s)) 
 {-@ type EqTN n = {t:Tick ({t:NEWavl | (eqRkN n t || rkDiffN n t 1) 
           && (not (isNode2_2 t) || (eqRkN n t))
           && (not (rkDiffN n t 1) || (isPromoteCase t)) 
           && ((not (isNode1_1 t && rk t > 0)) || eqRkN n t)  }) | tcost t >= 0 } @-} -- IsWavlNode t
+
 
 {-@ type EqRkWavl v = {t:NEWavl | eqRk v t  } @-} -- isWavlNode t
 -- {-@ type EqDiffWavl v = {t:NEWavl | (eqRk v t || rkDiff v t 1)  } @-} -- isWavlNode t
@@ -377,13 +382,15 @@ insert :: (Ord a) => a -> Tree a -> Tick (Tree a)
 insert x Nil = pure (singleton x)
 insert x t@(Tree v n l r) = case compare x v of
     LT -> undefined -- insL
-    GT -> insR1 v n l r'
+    GT -> insRi tr
     EQ -> pure t
     where
       l' = insert x l
       r' = insert x r
-      l'' = tval l'
-      r'' = tval r'
+      tl = treeL v n l' r
+      tr = treeR v n l r'
+      -- l'' = tval l'
+      -- r'' = tval r'
       -- insL | rk (tval l') < n                       = treeLW1 l v n l' r
       --      | is0ChildN n l'' && rk l'' == rk r + 1  = RTick.wmap promoteL (treeL v n l' r)
       --      | is0ChildN n l''                        = RTick.fmap balL (treeL x n l' r)
@@ -392,22 +399,33 @@ insert x t@(Tree v n l r) = case compare x v of
       --      | is0ChildN n r''                        = RTick.fmap balR (treeR v n l r')
 
 -- zu beweisen: {t:EqT s | amortisedStmt s t }
-{-@ insR1 ::  x:a  -> n:NodeRank -> l:ChildB n 
-          -> r:Tick ({r':ChildW n | notEmptyTree r' && n <= (rk r') + 2 && (not ((n - rk r' == 1)) || (isPromoteCase r'))}) 
-          -> EqTN n @-}
-insR1 :: a -> Int -> Tree a -> Tick(Tree a) -> Tick(Tree a)
-insR1 v n l r
-  | rk (tval r) < n                      = treeRW1 v n l r 
-  | is0ChildN n r' && n == rk l + 1  = RTick.wmap promoteR (treeR v n l r)
-  | is0ChildN n r'  = assert (isNode2_0  (tval (treeR v n l r))) ?? assert (n == rk (tval (treeR v n l r))) ?? undefined -- RTick.fmap balR (treeR v n l r)
-    where
-      r' = tval r
+-- {-@ insR1 ::  x:a  -> n:NodeRank -> l:ChildB n 
+--           -> r:Tick ({r':ChildW n | notEmptyTree r' && n <= (rk r') + 2 && (not ((n - rk r' == 1)) || (isPromoteCase r'))}) 
+--           -> EqTN n @-}
+-- insR1 :: a -> Int -> Tree a -> Tick(Tree a) -> Tick(Tree a)
+-- insR1 v n l r
+--   | rk (tval r) < n                      = treeRW1 v n l r 
+--   | is0ChildN n r' && n == rk l + 1  = RTick.wmap promoteR (treeR v n l r)
+--   | is0ChildN n r'  = assert (isNode2_0  (tval (treeR v n l r))) ?? assert (n == rk (tval (treeR v n l r))) ?? undefined -- RTick.fmap balR (treeR v n l r)
+--     where
+--       r' = tval r
 
+{-@ insRi :: s:TreeRi -> EqTT s @-}
+insRi :: Tick(Tree a) -> Tick(Tree a)
+insRi  = undefined
 -- TRUSTED CODE, we assume that the costs are given from the child to the parent
 {-@ type TreeR n l r = {v:Tick (TreeR1 n l r) | tcost r == tcost v} @-}
-{-@ type TreeR1 n l r = {t:NEAlmostWavl | left t == l && right t == tval r && rk t == n } @-}
+{-@ type TreeR1 n l r = {t:NEAlmostWavl | left t == l && right t == tval r && rk t == n 
+          && notEmptyTree (tval r) 
+          && (not (is0ChildN n (tval r)) || (isPromoteCase (tval r)))} @-}
 {-@ type TreeL n l r = {v:Tick (TreeL1 n l r) | tcost l == tcost v} @-}
-{-@ type TreeL1 n l r = {t:NEAlmostWavl | left t == (tval l) && right t == r && rk t == n } @-}
+{-@ type TreeL1 n l r = {t:NEAlmostWavl | left t == tval l && right t == r && rk t == n 
+          && notEmptyTree (tval l) 
+          && (not (is0ChildN n (tval l)) || (isPromoteCase (tval l))) } @-}
+{-@ type TreeRi = Tick ({t:NEAlmostWavl | notEmptyTree (right t) 
+          && (not (is0Child t (right t)) || (isPromoteCase (right t)))}) @-}
+{-@ type TreeLi = {t:NEAlmostWavl | notEmptyTree (right t) 
+          && (not (is0Child t (right t)) || (isPromoteCase (right t)))} @-}
 
 {-@ treeR :: x:a -> n:NodeRank -> l:ChildB n -> {r:Tick (ChildW n) | True } -> t:TreeR n l r @-} -- is0ChildN n (tval r)
 treeR :: a -> Int -> Tree a -> Tick(Tree a) -> Tick(Tree a)
