@@ -138,3 +138,74 @@ Formel, mit der ich es versucht habe:
 
 Jedoch schafft LH es nicht von selbst, diesen Umstand zu beweisen. 
 
+## Further cases which are (trivially) true
+but strengthen our refinement: 
+
+### Clause 'isNode2_2nNil t $==>$ EqRk t s'
+if t is a 2,2-node then we know that the input tree has to have equal rk. The constraint `not Nil` is added because the input tree s could be Nil thus not be a 2,2-Node. Therefore we refined this constraint in order to only affect 2,2-nodes. 
+
+#### proof
+Trivially true because s is a Wavl tree and if after an insert t is a 2,2-Node no promote step was done in the step right before. The only step who returns a 2,2-node is the rebuilding (i.e. treeW) case and this one always has the same rank. 
+
+# insert comments(moved from code): 
+```haskell
+{-- insert x t = c is
+  2,2 -> must be EqRk, since this case isn't produced from bal*, therefore -> (isNode2_2 c) -> EqRk c t
+  1,2 || 2,1  -> can be either a case "after" rebalancing or be a promote step but also for a promote step
+  1,1:  can have different causes, but for all cases it is true that: (rk c > 0) && isNode1_1 c -> EqRk c t
+      Exception is the singleton-case: (rk == 0) && isNode1_1 c => RkDiff t c 1   
+  
+  from that we conclude the following clauses for 1,1 / 2,2 (refining for t): 
+    (isNode2_2 t || isNode1_1 t) ==> (RkDiff t s 0) <=> 
+    not (isNode2_2 t || isNode1_1 t) || (RkDiff t s 0) <=> 
+    (not (isNode2_2 t) && not (isNode1_1 t)) || (RkDiff t s 0) 
+
+    then we can say for t in insert:
+     (isNode1_1 t && rk t == 0) ==> RkDiff t s 1           <=> (not (isNode1_1 t && rk t == 0)) || RkDiff t s 1
+     (isNode1_1 t && rk t > 0)  ==> RkDiff t s 0           <=> (not (isNode1_1 t && rk t > 0))  || RkDiff t s 0
+
+  And finally, I added IsWavlNode t which made it valid. The same was done to balL/R
+  -> my reasoning: by bounding the case group explicitly by defining all possible cases LH is able to determine which cases are allowed and which aren't
+
+  refinement for potential annotation clauses: 
+  (RkDiff s t 1) ==> (potT (tval t') + tcost t' <= potT s)     <=> 
+   not (RkDiff s t 1) || (potT (tval t') + tcost t' <= potT s) <=> 
+    ((EqRk t s) || (potT (tval t') + tcost t' <= potT s)) 
+
+  and 
+  (EqRk t s) ==> (potT (tval t') + tcost t' <= potT s + 3)     <=> 
+   not (EqRk t s) || (potT (tval t') + tcost t' <= potT s + 3) <=> 
+   (RkDiff s t 1) || (potT (tval t') + tcost t' <= potT s + 3)
+
+  what we know / can exclude:
+  * we don't need to specify both potT and potT2 bc we know that the input and output of insert is a wavl tree, thus satisfying potT, which has the stronger constraint, i.e. compare balL/R 
+
+clause `isNode2_2nNil t ==> EqRk t s`:
+  we know that `(not (isNode2_2 s) || (EqRk t s))`should also hold for insert, since if s is a 2,2-Node then regardless of the outcome of insert in a child the rk will stay
+  the same. But here we have the problem that isNode2_2 does not allow Nil values so we had to add the helper inline function isNode2_2nNil, the small standing for 'not' 
+
+to be inserted: 
+  && (not (RkDiff s (tval t') 1) || (potT2 (tval t') + tcost t' <= potT2 s))
+                          && (not (EqRk (tval t') s)     || (potT2 (tval t') + tcost t' <= potT2 s + 2))
+  
+--}
+-- {-@ insert :: (Ord a) => a -> s:Wavl -> t':{Tick ({t:NEWavl | (EqRk t s || RkDiff t s 1) 
+--           && (not (isNode2_2 t) || (EqRk t s)) 
+--           && ((not (isNode1_1 t && rk t > 0)) || EqRk t s) && IsWavlNode t }) 
+-- --           | tcost t' >= 0   
+--              && (not (RkDiff s (tval t') 1) || amortized t' s)
+--              && (not (EqRk (tval t') s)     || amortized1 t' s)
+--                 }  @-} -- / [rk (tval t')]
+```
+
+## Extension: MT case for isNode2_2
+The negated case set for a Wavl node which is a 2,2-node would be the all possible cases which are still Wavl but not 2,2: 1,1, 1,2 and 2,1. 
+And we know that the negation of `eqRk t s` in our insert function for a given output is `rkDiff t s 1` bc the output can only ever be either equal rk or +1 in rank. Thus, we can form another constraint for our insert refinement (which we already defined for balL/R, incidentally): 
+```haskell
+(not (is0ChildN n r') || (isPromoteCase r'))
+```
+with
+```haskell
+isPromoteCase :: Tree a -> Bool
+isPromoteCase t = (isNode1_1 t && rk t == 0) || isNode1_2 t || isNode2_1 t
+```
