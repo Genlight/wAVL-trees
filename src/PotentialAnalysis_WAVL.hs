@@ -40,14 +40,21 @@ data Tree a = Nil | Tree { val :: a, rd :: Int, left :: (Tree a), right :: (Tree
 {-@ type NodeRank = {v:Int | v >= 0} @-}
 {-@ type MaybeWavlNode = {v:Wavl | (not (notEmptyTree v) || IsWavlNode v) } @-}
 {-@ type NEAlmostWavl = {t:AlmostWavl | notEmptyTree t } @-}
+
+
 {-@ type EqT s = {t:Tick ({t:NEWavl | (eqRk t s || rkDiff s t 1) 
           && (not (isNode2_2 t) || (eqRk t s))
           && (not (rkDiff s t 1) || (isPromoteCase t)) 
           && ((not (isNode1_1 t && rk t > 0)) || eqRk t s) }) | tcost t >= 0 } @-} -- IsWavlNode t && (not (isNode2_2nNil s) || (eqRk t s)) 
+
 {-@ type EqTT s = {t:Tick ({t:NEWavl | (eqRk t (tval s) || rkDiff (tval s) t 1) 
           && (not (isNode2_2 t) || (eqRk t (tval s)))
           && (not (rkDiff (tval s) t 1) || (isPromoteCase t)) 
           && ((not (isNode1_1 t && rk t > 0)) || eqRk t (tval s)) }) | tcost t >= 0 } @-} -- IsWavlNode t && (not (isNode2_2nNil s) || (eqRk t s)) 
+
+
+
+
 {-@ type EqTN n = {t:Tick ({t:NEWavl | (eqRkN n t || rkDiffN n t 1) 
           && (not (isNode2_2 t) || (eqRkN n t))
           && (not (rkDiffN n t 1) || (isPromoteCase t)) 
@@ -382,7 +389,7 @@ insert :: (Ord a) => a -> Tree a -> Tick (Tree a)
 insert x Nil = pure (singleton x)
 insert x t@(Tree v n l r) = case compare x v of
     LT -> undefined -- insL
-    GT -> insRi tr
+    GT -> extract (tval (insRi tr)) -- {-@ extract :: Tick ({s:Wavl | True }) -> {t:EqT s | True }  @-}
     EQ -> pure t
     where
       l' = insert x l
