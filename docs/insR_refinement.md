@@ -81,7 +81,7 @@ is not a subtype of the required type
 ```
 Was bedeutet, dass LH nicht erkennt, dass `RTick.fmap balR (treeR v n l r)` das refinement `ìsWavlNode t` auf dem Rückgabewert hat. Da `balR` dies sehr wohl auf seinem Rückgabewert hat, scheint es hier zum Verlust des besagten refinement bzw. zu einem Erasure zu kommen. Dies passiert sehr wahrscheinlich bei der Neuerstellung des Monad-gewrappten Typen und Rückgabewert von `fmap`. Da es sich bei einem gewrappten Monaden immer um ein neues Objekt handelt, gehen hier nicht weitergegebene Constraints verloren. Es werden für die Berechnung des Rückgabewerts nur der Output von `fmap` verwendet.  
 
-## Versuch 3: isPromoteCase 
+## Versuch 3:  isPromoteCase
 Ein weiterer Versuch, war den isPromoteCase explizit zu propagieren: 
 ```haskell
 {-@ inline isPromoteCase @-}

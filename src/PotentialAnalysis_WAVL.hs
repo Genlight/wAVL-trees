@@ -396,14 +396,14 @@ insert x t@(Tree v n l r) = case compare x v of
       r' = insert x r
       tl = treeL v n l' r
       tr = treeR v n l r'
-      -- l'' = tval l'
-      -- r'' = tval r'
-      -- insL | rk (tval l') < n                       = treeLW1 l v n l' r
-      --      | is0ChildN n l'' && rk l'' == rk r + 1  = RTick.wmap promoteL (treeL v n l' r)
-      --      | is0ChildN n l''                        = RTick.fmap balL (treeL x n l' r)
-      -- insR | rk (tval r') < n                       = treeRW1 v n l r' 
-      --      | is0ChildN n r'' && rk r'' == rk l + 1  = RTick.wmap promoteR (treeR v n l r')
-      --      | is0ChildN n r''                        = RTick.fmap balR (treeR v n l r')
+      l'' = tval l'
+      r'' = tval r'
+      insL | rk (tval l') < n                       = assert (balanced (tval(treeLW1 n))) ?? treeLW1 v n l' r
+           | is0ChildN n l'' && rk l'' == rk r + 1  = assert (is0ChildN n l'') ?? RTick.wmap promoteL (treeL v n l' r)
+           | is0ChildN n l''                        = RTick.fmap balL (treeL x n l' r)
+      insR | rk (tval r') < n                       = treeRW1 v n l r' 
+           | is0ChildN n r'' && rk r'' == rk l + 1  = RTick.wmap promoteR (treeR v n l r')
+           | is0ChildN n r''                        = RTick.fmap balR (treeR v n l r')
 
 -- zu beweisen: {t:EqT s | amortisedStmt s t }
 -- {-@ insR1 ::  x:a  -> n:NodeRank -> l:ChildB n 
