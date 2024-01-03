@@ -88,3 +88,29 @@ I had the case, when I did some tests on how to add the potential function `potT
 
 At this point I removed the `{-@ reflect myFunc @-}` annotations and I thought that the file would still compile but that wasn't the case. After some trials I found that 
 reflecting `singleton` into the logic helped checking the refinement of two of my rotate cases (`rotateRightD` and `rotateLeftD`). without singleton, the following expression could not be checked: `(potT2 t' + tcost t - tcost s) == potT2 (tval s)`
+
+
+# Refinement: using "variable names" in type refinements
+I encountered at one point a problem with the type propagation when using "dependent" types, i.e. there are no real dependent types in LH since we are dealing with liquid types.
+
+When designing `EqT`, `EqT1` and `EqT2` types i found that LH does not replace variables with another respective variable when using a variable as input for refinement types. i.e. the following works: 
+
+```haskell
+type EqT s = ...
+
+...
+-- used in refinement
+s:Wavl -> t:EqT s 
+ ```
+
+but not this: 
+
+```haskell
+type EqT s = ...
+
+...
+-- used in refinement
+v:Wavl -> t:EqT v ... 
+```
+
+The error message said, that there were unbound variables in the context or that LH was not able to cast a type, i.e. a variable was of the wrong type, i.e. Tick(Wavl) and Wavl. 
