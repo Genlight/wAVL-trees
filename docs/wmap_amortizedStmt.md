@@ -99,6 +99,15 @@ we found that at the insert function at the insL level was not able to infer the
 insert x t@(Tree v n l r) = 
 ...
      insL | rk (tval l') < n                       = undefined -- treeLW1 v n l' r -- assert (amortized1 l' l) ?? (treeL v n l' r) -- is not accepted
+              -- assert (n == rk r + 1) ?? 
+              -- assert (n >= 0) ?? 
+              -- assert (rk (tval (Tick (tcost l') (Tree x n (tval l') r))) == n) ??
+              -- assert (rk (tval (Tick (tcost l') (Tree x n (tval l') r))) == rk r + 1) ??
+              -- assert (rk (promoteL (tval (Tick (tcost l') (Tree x n (tval l') r)) )) == rk r + 2) ?? 
+              -- assert (rk (promoteL (tval (Tick (tcost l') (Tree x n (tval l') r)) )) == rk (tval l') + 1) ?? 
+              -- assert (rk (promoteL (tval (Tick (tcost l') (Tree x n (tval l') r)) )) == n + 1) ?? 
+              -- assert (rk (tval (wmap promoteL (Tick (tcost l') (Tree x n (tval l') r)) )) == n + 1) ?? -- fails to prove !! 
+              -- assert (rk (tval (wmapPromL promoteL (Tick (tcost l') (Tree x n (tval l') r)) )) == n + 1) ?? 
            | is0ChildN n l'' && rk l'' == rk r + 1  =  assert (n == rk (tval l')) ?? 
               assert (isAlmostWavl (tval (Tick (tcost l') (Tree x n (tval l') r)))) ??
               assert (amortized l' (pure l)) ??
