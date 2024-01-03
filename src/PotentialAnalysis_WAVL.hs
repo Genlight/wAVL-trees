@@ -510,19 +510,19 @@ is valid:
 
 to prove: pot1 t' + tcost t' <= pot12 s + tcost s
 
-              && tcost (Tick (1 + (tcost s)) (f (tval s))) == tcost s + 1
+              && tcost (Tick (1 + (tcost s)) (f (tval s))) == tcost s + 1 -- tcost t' = tcost s + 1
               && pot1 t' + 1 == pot12 s
               && pot12 s == potT2 (tval s)
+              && pot1 t' + tcost t' <= pot12 s + tcost s -- i.e. amortized' t' s
 -}
 {-@ wmapPromL :: f:PromoteL_t
           -> {s:Tick (Node0_1) | tcost s >= 0} 
           -> {t':EqT2 s | Tick (tcost s + 1) (f (tval s)) == t' 
           && RkDiff (tval t') (tval s) 1 
-          && tcost (Tick (1 + (tcost s)) (f (tval s))) == tcost s + 1
+          && tcost t' == tcost s + 1
           && pot1 t' + 1 == pot12 s
           && pot12 s == potT2 (tval s)
           && amortized' t' s
-          && pot1 t' + tcost t' <= pot12 s + tcost s
               } @-}
 wmapPromL :: (Tree a -> Tree a) -> Tick (Tree a) -> Tick (Tree a)
 wmapPromL f s@(Tick m x) =  Tick (1 + m) (f x)
