@@ -114,3 +114,10 @@ v:Wavl -> t:EqT v ...
 ```
 
 The error message said, that there were unbound variables in the context or that LH was not able to cast a type, i.e. a variable was of the wrong type, i.e. Tick(Wavl) and Wavl. 
+
+# inline and measures instead of predicates
+Predicates are unchecked for type signatures and can lead to unclear error msg which are hard to debug. Further, the mechanism for module importing is failing for Predicates i.e. they are not referencable in the context but types are. Problem: if you reference a Predicate in a type this can lead to errors. 
+
+With concrete Haskell functions which are loaded into the LH logic, this should become better and you can actually split code in a better way. 
+
+

@@ -91,4 +91,25 @@ amortized1 :: Tick (Tree a) -> Tick (Tree a) -> Bool
 amortized1 t' s = pot1 t' + tcost t' <= pot1 s + tcost s + 2
 ```
 
+## insert: trying to assert which applies
+By trying out which constraints LH can actually infer I found that with commit `9e0041289787d3787cff56a941129c639f29b82a (HEAD -> test/wmap, origin/test/wmap)`
+we found that at the insert function at the insL level was not able to infer the node structure before an insert in one of the child nodes. 
 
+```haskell
+insert x t@(Tree v n l r) = 
+...
+     insL | rk (tval l') < n                       = undefined -- treeLW1 v n l' r -- assert (amortized1 l' l) ?? (treeL v n l' r) -- is not accepted
+           | is0ChildN n l'' && rk l'' == rk r + 1  =  assert (n == rk (tval l')) ?? 
+              assert (isAlmostWavl (tval (Tick (tcost l') (Tree x n (tval l') r)))) ??
+              assert (amortized l' (pure l)) ??
+              assert (potT l'' + potT r + 1 == potT2 (Tree x n (tval l') r)) ??
+              assert (potT l'' + potT r == potT (tval (wmapPromL promoteL (Tick (tcost l') (Tree x n (tval l') r) )))) ??
+              assert (potT l'' + potT r + tcost l' <= tcost (wmapPromL promoteL (Tick (tcost l') (Tree x n (tval l') r))) + potT (tval (wmapPromL promoteL (Tick (tcost l') (Tree x n (tval l') r) )))) ??
+              assert (potT l'' + potT r + tcost l' + 1 == tcost (wmapPromL promoteL (Tick (tcost l') (Tree x n (tval l') r))) + potT (tval (wmapPromL promoteL (Tick (tcost l') (Tree x n (tval l') r) )))) ??
+              assert () ??
+              assert (potT l + potT r + 1 == potT t) ?? -- fails to prove
+              assert (potT (tval (wmapPromL promoteL (Tick (tcost l') (Tree x n (tval l') r) ))) + tcost (tval (wmapPromL promoteL (Tick (tcost l') (Tree x n (tval l') r) ))) <= potT t) ?? -- fails to prove
+              wmapPromL promoteL (Tick (tcost l') (Tree x n (tval l') r) )
+```
+
+Thus the same should apply for all other rotations / steps, i.e. we only check for structure after the application
