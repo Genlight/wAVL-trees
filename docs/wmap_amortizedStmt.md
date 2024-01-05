@@ -99,26 +99,42 @@ we found that at the insert function at the insL level was not able to infer the
 insert x t@(Tree v n l r) = 
 ...
      insL | rk (tval l') < n                       = undefined -- treeLW1 v n l' r -- assert (amortized1 l' l) ?? (treeL v n l' r) -- is not accepted
-              -- assert (n == rk r + 1) ?? 
-              -- assert (n >= 0) ?? 
-              -- assert (rk (tval (Tick (tcost l') (Tree x n (tval l') r))) == n) ??
-              -- assert (rk (tval (Tick (tcost l') (Tree x n (tval l') r))) == rk r + 1) ??
-              -- assert (rk (promoteL (tval (Tick (tcost l') (Tree x n (tval l') r)) )) == rk r + 2) ?? 
-              -- assert (rk (promoteL (tval (Tick (tcost l') (Tree x n (tval l') r)) )) == rk (tval l') + 1) ?? 
-              -- assert (rk (promoteL (tval (Tick (tcost l') (Tree x n (tval l') r)) )) == n + 1) ?? 
-              -- assert (rk (tval (wmap promoteL (Tick (tcost l') (Tree x n (tval l') r)) )) == n + 1) ?? -- fails to prove !! 
-              -- assert (rk (tval (wmapPromL promoteL (Tick (tcost l') (Tree x n (tval l') r)) )) == n + 1) ?? 
-           | is0ChildN n l'' && rk l'' == rk r + 1  =  assert (n == rk (tval l')) ?? 
+              
+            | is0ChildN n l'' && rk l'' == rk r + 1 && n == 0 = assert (not (notEmptyTree l)) ?? assert (not (notEmptyTree r)) ?? 
+             assert (potT l == 0) ?? -- fails to prove!!
+             assert (potT r == 0) ?? -- fails to prove!!
+             assert (0 == potT t) ?? -- fails to prove!!  
+           | is0ChildN n l'' && rk l'' == rk r + 1  =  assert (n == rk (tval l')) ??
+              assert (n == rk r + 1) ?? 
+              assert (n >= 0) ?? 
+              assert (rk (tval (Tick (tcost l') (Tree x n (tval l') r))) == n) ??
+              assert (rk (tval (Tick (tcost l') (Tree x n (tval l') r))) == rk r + 1) ??
+              assert (rk (promoteL (tval (Tick (tcost l') (Tree x n (tval l') r)) )) == rk r + 2) ?? 
+              assert (rk (promoteL (tval (Tick (tcost l') (Tree x n (tval l') r)) )) == rk (tval l') + 1) ?? 
+              assert (rk (promoteL (tval (Tick (tcost l') (Tree x n (tval l') r)) )) == n + 1) ?? 
+              assert (rk (tval (wmap promoteL (Tick (tcost l') (Tree x n (tval l') r)) )) == n + 1) ?? -- fails to prove !! 
+              assert (rk (tval (wmapPromL promoteL (Tick (tcost l') (Tree x n (tval l') r)) )) == n + 1) ?? 
+              assert (isNode1_1 t ) ?? 
+              assert (rk (tval (wmapPromL promoteL (Tick (tcost l') (Tree x n (tval l') r)) )) == n + 1) ??
               assert (isAlmostWavl (tval (Tick (tcost l') (Tree x n (tval l') r)))) ??
               assert (amortized l' (pure l)) ??
               assert (potT l'' + potT r + 1 == potT2 (Tree x n (tval l') r)) ??
               assert (potT l'' + potT r == potT (tval (wmapPromL promoteL (Tick (tcost l') (Tree x n (tval l') r) )))) ??
-              assert (potT l'' + potT r + tcost l' <= tcost (wmapPromL promoteL (Tick (tcost l') (Tree x n (tval l') r))) + potT (tval (wmapPromL promoteL (Tick (tcost l') (Tree x n (tval l') r) )))) ??
+              assert (potT l'' + potT r + tcost l' <= tcost (wmapPromL promoteL (Tick (tcost l') (Tree x n (tval l') r))) + potT (tval (wmapPromL promoteL (Tick (tcost l') (Tree x n (tval l') r) )))) ?? --not important, the next one is
               assert (potT l'' + potT r + tcost l' + 1 == tcost (wmapPromL promoteL (Tick (tcost l') (Tree x n (tval l') r))) + potT (tval (wmapPromL promoteL (Tick (tcost l') (Tree x n (tval l') r) )))) ??
-              assert () ??
+              assert (potT t >= potT r + potT l) ??
+              assert (potT t >= potT r + potT l'' + tcost l') ??
               assert (potT l + potT r + 1 == potT t) ?? -- fails to prove
               assert (potT (tval (wmapPromL promoteL (Tick (tcost l') (Tree x n (tval l') r) ))) + tcost (tval (wmapPromL promoteL (Tick (tcost l') (Tree x n (tval l') r) ))) <= potT t) ?? -- fails to prove
               wmapPromL promoteL (Tick (tcost l') (Tree x n (tval l') r) )
 ```
 
 Thus the same should apply for all other rotations / steps, i.e. we only check for structure after the application
+
+## found problem
+
+there is the case with `n=0` | `isNode1_1 t` which results in `potT t = 0` and `potT t == potT r + potT l`, i.e. the insertion of a node can create potential, in the step right after the singleton case. 
+
+This leads altogether to a different amortized statement: 
+```haskell
+```
