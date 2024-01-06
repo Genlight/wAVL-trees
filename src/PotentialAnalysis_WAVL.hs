@@ -49,7 +49,9 @@ also, most of the implications for the equality proofs are made on assumptions o
 {-@ type EqT s = {t':Tick ({t:NEWavl | (EqRk t s || RkDiff t s 1) 
           && (not (isNode2_2 t) || (EqRk t s)) 
           && (not (isNode2_2nNil s) || (EqRk t s)) 
-          && ((not (isNode1_1 t && rk t > 0)) || EqRk t s) && IsWavlNode t }) | tcost t' >= 0 } @-} -- && amortizedStmt t' s
+          && ((not (isNode1_1 t && rk t > 0)) || EqRk t s) && IsWavlNode t })
+          | tcost t' >= 0 
+           } @-} -- && amortizedStmt t' s
 --  s: Tick(Tree a), f: function to apply, m: tcost to add
 -- {-@ type EqTf s f m = {t':Tick ({t:NEWavl | (EqRk t (tval s) || RkDiff t (tval s) 1) 
 --           && (not (isNode2_2 t) || (EqRk t (tval s))) && (not (isNode2_2nNil (tval s)) || (EqRk t (tval s))) 
@@ -84,7 +86,9 @@ also, most of the implications for the equality proofs are made on assumptions o
 {-@ type Node0_1 = { v:AlmostWavl | notEmptyTree v && notEmptyTree (left v)  && (RkDiff v (left v) 0 ) && (RkDiff v (right v) 1) && rk v >= 0 } @-}
 {-@ type Node1_0 = { v:AlmostWavl | notEmptyTree v && notEmptyTree (right v) && (RkDiff v (left v) 1 ) && (RkDiff v (right v) 0) && rk v >= 0 } @-}
 
-{-@ type Node1_1 = { v:NEWavl | isNode1_1 v } @-}
+{-@ type Node1_1 = { v:NEWavl | isNode1_1 v 
+          && (rk v > 0 || (potT v == 0 && potT v == potT (left v) +  potT (right v))) 
+          && (rk v == 0  || potT v == potT (left v) + potT (right v) + 1) } @-}
 {-@ type Node2_1 = { v:NEWavl | isNode2_1 v } @-}
 {-@ type Node1_2 = { v:NEWavl | isNode1_2 v } @-}
 
@@ -100,7 +104,9 @@ also, most of the implications for the equality proofs are made on assumptions o
 {-@ predicate IsNode2_2 T = (rk (left T)) + 2 == (rk T) && (rk (right T)) + 2 == rk T && notEmptyTree (left T) && notEmptyTree (right T) @-}
 {-@ predicate IsNode1_2 T = (rk (left T)) + 1 == (rk T) && (rk (right T)) + 2 == rk T && notEmptyTree (left T) @-}
 {-@ predicate IsNode2_1 T = (rk (left T)) + 2 == (rk T) && (rk (right T)) + 1 == rk T && notEmptyTree (right T)@-}
-{-@ predicate IsNode1_1 T = (rk (left T)) + 1 == (rk T) && (rk (right T)) + 1 == rk T @-}
+{-@ predicate IsNode1_1 T = (rk (left T)) + 1 == (rk T) && (rk (right T)) + 1 == rk T 
+    	    && (rk T > 0 || (potT T == 0 && potT T == potT (left T) +  potT (right T))) 
+          && (rk T == 0  || potT T == potT (left T) + potT (right T) + 1) @-}
 
 {-@ predicate IsWavlNode T = (IsNode1_2 T || IsNode2_1 T || IsNode2_2 T || IsNode1_1 T) @-}
 
@@ -218,7 +224,7 @@ empty :: Tree a -> Bool
 empty Nil = True
 empty _ = False
 
-{-@ singleton :: a -> {v:NEWavl | ht v == 0 && isSingleton v && potT v == 0 && not (isNode2_2 v)} @-}
+{-@ singleton :: a -> {v:NEWavl | ht v == 0 && isSingleton v && potT v == 0 && potT v == potT (left v) + potT (right v) && not (isNode2_2 v)} @-}
 singleton a = Tree a 0 Nil Nil
 
 -- potential analysis for insertion
@@ -400,7 +406,8 @@ to be inserted:
 --              && (not (RkDiff s (tval t') 1) || amortized t' s)
 --              && (not (EqRk (tval t') s)     || amortized2 t' s)
 --                 }  @-} -- / [rk (tval t')]
-{-@ insert :: (Ord a) => a -> s:Wavl -> {t':EqT s | amortizedStmt t' s } @-} -- / [rk (tval t')]
+{-@ insert :: (Ord a) => a -> {s:Wavl | IsWavlNode s} -> {t':EqT s | amortizedStmt t' s
+             && (rk (tval t') > 0 || amortized t' (pure s))} @-} -- / [rk (tval t')]
 insert :: (Ord a) => a -> Tree a -> Tick (Tree a)
 insert x Nil = pure (singleton x)
 insert x t@(Tree v n l r) = case compare x v of
@@ -413,14 +420,8 @@ insert x t@(Tree v n l r) = case compare x v of
       l'' = tval l'
       r'' = tval r'
       insL | rk (tval l') < n                       = treeLW1 t l'
-           | is0ChildN n l'' && rk l'' == rk r + 1 && n == 0 = undefined -- assert (not (notEmptyTree l)) ?? assert (not (notEmptyTree r)) ?? 
-            -- assert (1 == potT2 (Tree x n (tval l') r)) ?? 
-            -- assert (potT t + 1 == potT l'' + tcost l' + potT r + 1) ?? -- Leaf to 0,1-Node == +1 potential case
-            --  wmapPromL promoteL t l'
-           | is0ChildN n l'' && rk l'' == rk r + 1           = undefined -- assert (isNode1_1 t) ?? assert (n > 0) ?? 
-            -- assert (potT t == potT2 (Tree x n (tval l') r)) ??
-            -- wmapPromL promoteL (Tick (tcost l') (Tree x n (tval l') r) )
-              -- Tick (tcost l' + 1) (promoteL (Tree x n (tval l') r))
+           | is0ChildN n l'' && rk l'' == rk r + 1 && n == 0 = wmapPromL promoteL t l'
+           | is0ChildN n l'' && rk l'' == rk r + 1  = undefined --wmapPromL promoteL t l'
            | is0ChildN n l'' && isNode1_2 l'' =  assert (isNode1_2 l'') ?? undefined -- fmapRotRight rotateRight (Tick (tcost l') (Tree x n (tval l') r))
               -- assert (rk (tval (Tick (tcost l') (Tree x n (tval l') r) )) == n) ?? 
               -- assert (rk (tval (Tick (tcost l') (Tree x n (tval l') r) )) == rk (right l'') + 2) ?? 
@@ -467,6 +468,7 @@ amortized2' t' s = pot1 t' + tcost t' <= pot12 s + tcost s + 2
 amortizedStmt :: Tick (Tree a) -> Tree a -> Bool
 amortizedStmt t' s = (not (rkDiff s (tval t') 1) || amortized1 t' (pure s))
                  && (not (eqRk (tval t') s)      || amortized3 t' (pure s))
+                 && (rk (tval t') == 0 || amortized  t' (pure s)) -- same as s == Nil
 
 {-@ inline amortizedStmt' @-}
 {-@ amortizedStmt' :: Tick (AlmostWavl) -> Tick (Wavl) -> Bool @-}
@@ -546,6 +548,7 @@ treeLW1 t@(Tree x n l r) l'
             && potT s + 2 >= pot1 l + potT (right s) + tcost l + 1
             && potT s + 2 >= pot1 v + tcost l
             && potT s + 2 >= pot1 v + tcost v
+            && rk (tval v) > 0
             } @-}
 treeLW1_1 :: Tree a -> Tick(Tree a) -> Tick(Tree a)
 treeLW1_1 t@(Tree x n _ r) l = Tick (tcost l) (Tree x n (tval l) r)
@@ -612,8 +615,7 @@ to prove: pot1 t' + tcost t' <= pot12 s + tcost s
               && pot1 t' + tcost t' <= pot12 s + tcost s -- i.e. amortized' t' s
 -}
 {-@ wmapPromL :: f:PromoteL_t
-          -> {s:Node1_1 | (rk s > 0 || (potT s == 0 && potT s == potT (left s) + potT (right s)))
-                       && (rk s == 0  || potT s == potT (left s) + potT (right s) + 1)} 
+          -> s:Node1_1 
           -> {l:EqTL s | eqRk s (tval l) 
               && (rk s == 0 || amortized1 l (pure (left s)) ) 
               && (rk s > 0  || amortized  l (pure (left s)) )} 
@@ -626,6 +628,7 @@ to prove: pot1 t' + tcost t' <= pot12 s + tcost s
           && potT2 (Tree (val s) (rk s) (tval l) (right s)) == pot1 l + potT (right s) + 1
           && pot1 t == pot1 l + potT (right s)
           && amortized1 t (pure s)
+          && rk (tval t) > 0
           } @-}
 wmapPromL :: (Tree a -> Tree a) -> Tree a -> Tick (Tree a) -> Tick (Tree a)
 wmapPromL f t l 

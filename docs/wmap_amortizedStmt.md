@@ -139,3 +139,6 @@ there is the case with `n=0` | `isNode1_1 t` which results in `potT t = 0` and `
 
 analog to treeLW1 using case distinctions, i found that i could define two sub-functions, i.e. `wmapPromL_1` and `wmapPromL_2` and that worked out. 
 But now i have a more complex input type for `wmapPromL` which may not work with the refinements in `insert`.
+
+# new Problem, at insert level
+node1-1-Stmt needs a change in the balanced definition or i need to redefine `wmapPromL`.
