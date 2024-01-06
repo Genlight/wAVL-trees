@@ -120,4 +120,4 @@ Predicates are unchecked for type signatures and can lead to unclear error msg w
 
 With concrete Haskell functions which are loaded into the LH logic, this should become better and you can actually split code in a better way. 
 
-
+Further, with concrete Haskell functions my IDE (VS code) can locate them and code navigation via CTRL + left-click is possible. 
