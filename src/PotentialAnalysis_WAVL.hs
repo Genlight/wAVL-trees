@@ -514,7 +514,7 @@ treeLW1 :: a -> Int -> Tick(Tree a) -> Tree a -> Tick(Tree a)
 treeLW1 x n l r = Tick (tcost l) (Tree x n (tval l) r)
   -- | otherwise = Tick (tcost r) (Tree x 0 l (tval r))
 
--- version 2 of treeLW2 
+-- version 2 of treeLW2, works without the amortized3 stmt
 {-@ treeLW2 :: s:NEWavl -> {l:EqTL s | amortized3 l (pure (left s)) && is2Child s (tval l)} 
           -> {v:Tick ({v':NEWavl | right v' == right s && Is2Child v' (tval l) && rk s == rk v' && IsWavlNode v' }) 
           | tcost v == tcost l
@@ -524,8 +524,6 @@ treeLW1 x n l r = Tick (tcost l) (Tree x n (tval l) r)
            } @-}
 treeLW2 :: Tree a -> Tick(Tree a) -> Tick(Tree a)
 treeLW2 t@(Tree x n _ r) l = Tick (tcost l) (Tree x n (tval l) r)
-
-
 
 {-@ wmap :: f:(t1:NEAlmostWavl -> EqT1 t1) 
           -> {s:Tick (NEAlmostWavl) | tcost s >= 0} 
