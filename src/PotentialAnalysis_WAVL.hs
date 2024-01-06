@@ -90,6 +90,7 @@ also, most of the implications for the equality proofs are made on assumptions o
 
 {-@ type Node0_2 = { v:AlmostWavl | notEmptyTree v && notEmptyTree (left v) && EqRk v (left v) && RkDiff v (right v) 2  && rk v >= 1 } @-}
 {-@ type Node2_0 = { v:AlmostWavl | notEmptyTree v && notEmptyTree (right v) && EqRk v (right v) && RkDiff v (left v) 2 && rk v >= 1 } @-}
+{-@ type Node2_2 = { v:NEWavl | isNode2_2 v } @-}
 
 {-@ type Node1_3 = { v:AlmostWavl | notEmptyTree v && notEmptyTree (left v) && RkDiff v (left v) 1 && RkDiff v (right v) 3  && rk v >= 2 } @-}
 {-@ type Node3_1 = { v:AlmostWavl | notEmptyTree v && notEmptyTree (right v) && RkDiff v (left v) 3 && RkDiff v (right v) 1 && rk v >= 2 } @-}
@@ -499,7 +500,7 @@ treeL1 x n l r = Tick (tcost l) (Tree x n (tval l) r)
 
 -- also should hold but not necessary: potT t >= potT l + pot1 r
 {-@ treeRW1 :: x:a -> n:NodeRank -> l:ChildB n -> {r:Tick (r':NEWavl) | is2ChildN n (tval r)}  
-          -> {v:Tick ({t:NEWavl | left t == l && Is2Child t (tval r) && rk t == n && IsWavlNode t }) | tcost r == tcost v
+          -> {v:Tick ({t:NEWavl | left t == l && is2Child t (tval r) && rk t == n && IsWavlNode t }) | tcost r == tcost v
            } @-}
 treeRW1 :: a -> Int -> Tree a -> Tick(Tree a) -> Tick(Tree a)
 treeRW1 x n l r = Tick (tcost r) (Tree x n l (tval r))
@@ -514,18 +515,63 @@ treeLW1 :: a -> Int -> Tick(Tree a) -> Tree a -> Tick(Tree a)
 treeLW1 x n l r = Tick (tcost l) (Tree x n (tval l) r)
   -- | otherwise = Tick (tcost r) (Tree x 0 l (tval r))
 
--- version 2 of treeLW2, works without the amortized3 stmt
-{-@ treeLW2 :: s:NEWavl -> {l:EqTL s | amortized3 l (pure (left s)) && is2Child s (tval l)} 
-          -> {v:Tick ({v':NEWavl | right v' == right s && Is2Child v' (tval l) && rk s == rk v' && IsWavlNode v' }) 
-          | tcost v == tcost l
+-- case of treeLW1: `rkDiff (left s) l 1`, 2,1 -> 1,1-Node
+{-@ treeLW1_1 :: s:Node2_1 -> {l:EqTL s | amortized1 l (pure (left s)) && is2Child s (tval l) && rkDiff (left s) (tval l) 1 && isNode1_1 (tval l)} 
+          -> {v:EqT s | tcost v == tcost l && is2Child (tval v) (tval l)
+            && tval v == Tree (val s) (rk s) (tval l) (right s)
+            && potT (left s) + 1 >= pot1 l + tcost l 
+            && potT (right s) == potT (right (tval v))
+            && pot1 v == pot1 l + potT (right s) + 1
+            && potT s == potT (left s) + potT (right s)
+            && potT (left s) == potT s - potT (right s)
+            && potT s - potT (right s) + 1 >= pot1 l + tcost l 
+            && potT s + 1 >= pot1 l + potT (right s) + tcost l 
+            && potT s + 2 >= pot1 l + potT (right s) + tcost l + 1
+            && potT s + 2 >= pot1 v + tcost l
+            && potT s + 2 >= pot1 v + tcost v
+            } @-}
+treeLW1_1 :: Tree a -> Tick(Tree a) -> Tick(Tree a)
+treeLW1_1 t@(Tree x n _ r) l = Tick (tcost l) (Tree x n (tval l) r)
+
+-- case of treeLW1: `rkDiff (left s) l 1`, 2,2 -> 1,2-Node
+{-@ treeLW1_2 :: s:Node2_2 -> {l:EqTL s | amortized1 l (pure (left s)) && is2Child s (tval l) && rkDiff (left s) (tval l) 1 && isNode1_2 (tval l)} 
+          -> {v:EqT s | tcost v == tcost l && is2Child (tval v) (tval l)
+            && tval v == Tree (val s) (rk s) (tval l) (right s)
+            && potT (left s) + 1 >= pot1 l + tcost l
+            && potT (right s) == potT (right (tval v))
+            && pot1 v == pot1 l + potT (right s)
+            && potT s == potT (left s) + potT (right s) + 2
+            && potT (left s) == potT s - potT (right s) - 2
+            && potT s - potT (right s) - 1 >= pot1 l + tcost l 
+            && potT s - 1 >= pot1 l + potT (right s) + tcost l 
+            && potT s - 1 >= pot1 v + tcost l
+            && potT s - 1 >= pot1 v + tcost v
+            } @-}
+treeLW1_2 :: Tree a -> Tick(Tree a) -> Tick(Tree a)
+treeLW1_2 t@(Tree x n _ r) l = Tick (tcost l) (Tree x n (tval l) r)
+
+-- case of treeLW1: `eqRk (left s) l`
+{-@ treeLW1_3 :: s:NEWavl -> {l:EqTL s | amortized3 l (pure (left s)) && is2Child s (tval l) && eqRk (left s) (tval l)} 
+          -> {v:EqT s | tcost v == tcost l && is2Child (tval v) (tval l)
             && tval v == Tree (val s) (rk s) (tval l) (right s)
             && potT (left s) + 3 >= pot1 l + tcost l 
             && potT (right s) == potT (right (tval v))
             && pot1 v >= pot1 l + potT (right s)
-            && is2Child (tval v) (tval l)
+            && pot1 v <= pot1 l + potT (right s) + 2
+            && potT s >= potT (left s) + potT (right s)
+            && potT s <= potT (left s) + potT (right s) + 2
+            && (
+              ((potT (right s) /= potT (right (tval v)) + 2) || (potT s == potT (left s) + potT (right s) + 2))
+            || ((potT (right s) /= potT (right (tval v)) + 1) || (potT s == potT (left s) + potT (right s) + 1))
+            || ((potT (right s) /= potT (right (tval v))) || (potT s == potT (left s) + potT (right s)))
+            )
+            && potT s - potT (right s) + 3 >= pot1 l + tcost l 
+            && potT s + 3 >= pot1 l + potT (right s) + tcost l 
+            && potT s + 3 >= pot1 v + tcost l
+            && potT s + 3 >= pot1 v + tcost v
             } @-}
-treeLW2 :: Tree a -> Tick(Tree a) -> Tick(Tree a)
-treeLW2 t@(Tree x n _ r) l = Tick (tcost l) (Tree x n (tval l) r)
+treeLW1_3 :: Tree a -> Tick(Tree a) -> Tick(Tree a)
+treeLW1_3 t@(Tree x n _ r) l = Tick (tcost l) (Tree x n (tval l) r)
 
 {-@ wmap :: f:(t1:NEAlmostWavl -> EqT1 t1) 
           -> {s:Tick (NEAlmostWavl) | tcost s >= 0} 
