@@ -383,7 +383,7 @@ to be inserted:
 --              && (not (RkDiff s (tval t') 1) || amortized t' s)
 --              && (not (EqRk (tval t') s)     || amortized2 t' s)
 --                 }  @-} -- / [rk (tval t')]
-{-@ insert :: (Ord a) => a -> s:Wavl -> {t':EqT s | amortized2 t' (pure s) } @-} -- / [rk (tval t')]
+{-@ insert :: (Ord a) => a -> s:Wavl -> {t':EqT s | amortizedStmt t' s } @-} -- / [rk (tval t')]
 insert :: (Ord a) => a -> Tree a -> Tick (Tree a)
 insert x Nil = pure (singleton x)
 insert x t@(Tree v n l r) = case compare x v of
@@ -395,7 +395,7 @@ insert x t@(Tree v n l r) = case compare x v of
       r' = insert x r
       l'' = tval l'
       r'' = tval r'
-      insL | rk (tval l') < n                       = undefined -- treeLW2 t l' -- assert (amortized2 l' l) ?? (treeL v n l' r) -- is not accepted
+      insL | rk (tval l') < n                       = treeLW1 t l' -- assert (amortized2 l' l) ?? (treeL v n l' r) -- is not accepted
            | is0ChildN n l'' && rk l'' == rk r + 1 && n == 0 = undefined -- assert (not (notEmptyTree l)) ?? assert (not (notEmptyTree r)) ?? 
             -- assert (1 == potT2 (Tree x n (tval l') r)) ?? 
             -- assert (potT t + 1 == potT l'' + tcost l' + potT r + 1) ?? -- Leaf to 0,1-Node == +1 potential case
@@ -505,18 +505,18 @@ treeL1 x n l r = Tick (tcost l) (Tree x n (tval l) r)
 treeRW1 :: a -> Int -> Tree a -> Tick(Tree a) -> Tick(Tree a)
 treeRW1 x n l r = Tick (tcost r) (Tree x n l (tval r))
 
--- tried to set `rk (tval l) == rk l'` but that did
-{-@ treeLW1 :: x:a -> n:NodeRank -> {l:Tick(l':NEWavl) | is2ChildN n (tval l) } -> r:ChildB n  
-          -> {v:Tick ({t:NEWavl | right t == r && Is2Child t (tval l) && rk t == n && IsWavlNode t && potT t >= pot1 l + potT r}) 
-          | tcost l == tcost v
-            && v == Tick (tcost l) (Tree x n (tval l) r)
-           } @-}
-treeLW1 :: a -> Int -> Tick(Tree a) -> Tree a -> Tick(Tree a)
-treeLW1 x n l r = Tick (tcost l) (Tree x n (tval l) r)
+{-@ treeLW1 :: s:NEWavl -> {l:EqTL s | amortizedStmt l (left s) && is2Child s (tval l)} 
+          -> {v:EqT s | tcost v == tcost l && Is2Child (tval v) (tval l) && amortized3 v (pure s) && eqRk s (tval v) } @-}
+treeLW1 :: Tree a -> Tick(Tree a) -> Tick(Tree a)
+treeLW1 t@(Tree x n l r) l' 
+  | rkDiff l (tval l') 1 && isNode2_1 t = treeLW1_1 t l'
+  | rkDiff l (tval l') 1 && isNode2_2 t = treeLW1_2 t l'
+  | otherwise = treeLW1_3 t l'
+   
   -- | otherwise = Tick (tcost r) (Tree x 0 l (tval r))
 
 -- case of treeLW1: `rkDiff (left s) l 1`, 2,1 -> 1,1-Node
-{-@ treeLW1_1 :: s:Node2_1 -> {l:EqTL s | amortized1 l (pure (left s)) && is2Child s (tval l) && rkDiff (left s) (tval l) 1 && isNode1_1 (tval l)} 
+{-@ treeLW1_1 :: s:Node2_1 -> {l:EqTL s | amortized1 l (pure (left s)) && is2Child s (tval l) && rkDiff (left s) (tval l) 1} 
           -> {v:EqT s | tcost v == tcost l && is2Child (tval v) (tval l)
             && tval v == Tree (val s) (rk s) (tval l) (right s)
             && potT (left s) + 1 >= pot1 l + tcost l 
@@ -534,7 +534,7 @@ treeLW1_1 :: Tree a -> Tick(Tree a) -> Tick(Tree a)
 treeLW1_1 t@(Tree x n _ r) l = Tick (tcost l) (Tree x n (tval l) r)
 
 -- case of treeLW1: `rkDiff (left s) l 1`, 2,2 -> 1,2-Node
-{-@ treeLW1_2 :: s:Node2_2 -> {l:EqTL s | amortized1 l (pure (left s)) && is2Child s (tval l) && rkDiff (left s) (tval l) 1 && isNode1_2 (tval l)} 
+{-@ treeLW1_2 :: s:Node2_2 -> {l:EqTL s | amortized1 l (pure (left s)) && is2Child s (tval l) && rkDiff (left s) (tval l) 1} 
           -> {v:EqT s | tcost v == tcost l && is2Child (tval v) (tval l)
             && tval v == Tree (val s) (rk s) (tval l) (right s)
             && potT (left s) + 1 >= pot1 l + tcost l
