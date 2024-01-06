@@ -406,7 +406,7 @@ to be inserted:
 --              && (not (RkDiff s (tval t') 1) || amortized t' s)
 --              && (not (EqRk (tval t') s)     || amortized2 t' s)
 --                 }  @-} -- / [rk (tval t')]
-{-@ insert :: (Ord a) => a -> {s:Wavl | IsWavlNode s} -> {t':EqT s | amortizedStmt t' s
+{-@ insert :: (Ord a) => a -> s:Wavl -> {t':EqT s | amortizedStmt t' s
              && (rk (tval t') > 0 || amortized t' (pure s))} @-} -- / [rk (tval t')]
 insert :: (Ord a) => a -> Tree a -> Tick (Tree a)
 insert x Nil = pure (singleton x)
