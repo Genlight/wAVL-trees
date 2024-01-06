@@ -145,6 +145,14 @@ isNode2_1 t = (rk (left t)) + 2 == (rk t) && (rk (right t)) + 1 == rk t && notEm
 isNode2_2 :: Tree a -> Bool
 isNode2_2 t = (rk (left t)) + 2 == (rk t) && (rk (right t)) + 2 == rk t && notEmptyTree (right t) && notEmptyTree (left t)
 
+{-@ inline isNode0_1 @-}
+isNode0_1 :: Tree a -> Bool
+isNode0_1 t = (rk (left t)) == (rk t) && (rk (right t)) + 1 == rk t && notEmptyTree (left t)
+
+{-@ inline isNode1_0 @-}
+isNode1_0 :: Tree a -> Bool
+isNode1_0 t = (rk (right t)) == (rk t) && (rk (left t)) + 1 == rk t && notEmptyTree (right t)
+
 {-- 
   This inline check was needed to convey the property of isNode2_2 in insert but it needed a Pre-check, 
   
@@ -167,6 +175,13 @@ is2ChildN n t = (rk t) < n && n <= (rk t) + 2
 is2Child :: Tree a -> Tree a -> Bool 
 is2Child t v = (rk t) > (rk v) && (rk t) <= (rk v) + 2
 
+{-@ inline is0Child @-}
+is0Child :: Tree a -> Tree a -> Bool 
+is0Child t v = (rk t) == (rk v)
+
+{-@ inline isSingleton @-}
+isSingleton :: Tree a -> Bool
+isSingleton t = not (notEmptyTree (left t)) && not (notEmptyTree (right t)) && rk t == 0
 
 {-@ measure rk @-}
 {-@ rk :: t:Tree a -> {v:Rank | (not (notEmptyTree t) || v >= 0) && (notEmptyTree t || v== (-1))} @-}
@@ -203,7 +218,7 @@ empty :: Tree a -> Bool
 empty Nil = True
 empty _ = False
 
-{-@ singleton :: a -> {v:NEWavl | ht v == 0 && rk v == 0 && isNode1_1 v && potT v == 0 && not (isNode2_2 v)} @-}
+{-@ singleton :: a -> {v:NEWavl | ht v == 0 && isSingleton v && potT v == 0 && not (isNode2_2 v)} @-}
 singleton a = Tree a 0 Nil Nil
 
 -- potential analysis for insertion
@@ -239,8 +254,10 @@ pot1 t = potT (tval t)
 pot12 :: Tick (Tree a) -> Int
 pot12 t = potT2 (tval t)
 
-{-@ type PromoteL_t = (t1:Node0_1 -> {t:EqT1 t1 | IsNode1_2 t && RkDiff t t1 1 
-          && potT2 t1 -1 == potT t} ) @-}
+{-@ type PromoteL_t = (t1:Node0_1 -> {t:EqT1 t1 | isNode1_2 t && rkDiff t1 t 1 
+          && potT2 t1 -1 == potT t
+          && right t1 == right t
+          && left t1 == left t} ) @-}
 {-@ promoteL :: PromoteL_t @-}
 promoteL :: Tree a -> Tree a
 promoteL (Tree a n l r) = (Tree a (n+1) l r)
@@ -395,11 +412,11 @@ insert x t@(Tree v n l r) = case compare x v of
       r' = insert x r
       l'' = tval l'
       r'' = tval r'
-      insL | rk (tval l') < n                       = treeLW1 t l' -- assert (amortized2 l' l) ?? (treeL v n l' r) -- is not accepted
+      insL | rk (tval l') < n                       = treeLW1 t l'
            | is0ChildN n l'' && rk l'' == rk r + 1 && n == 0 = undefined -- assert (not (notEmptyTree l)) ?? assert (not (notEmptyTree r)) ?? 
             -- assert (1 == potT2 (Tree x n (tval l') r)) ?? 
             -- assert (potT t + 1 == potT l'' + tcost l' + potT r + 1) ?? -- Leaf to 0,1-Node == +1 potential case
-            --  wmapPromL promoteL (Tick (tcost l') (Tree x n (tval l') r) )
+            --  wmapPromL promoteL t l'
            | is0ChildN n l'' && rk l'' == rk r + 1           = undefined -- assert (isNode1_1 t) ?? assert (n > 0) ?? 
             -- assert (potT t == potT2 (Tree x n (tval l') r)) ??
             -- wmapPromL promoteL (Tick (tcost l') (Tree x n (tval l') r) )
@@ -595,21 +612,71 @@ to prove: pot1 t' + tcost t' <= pot12 s + tcost s
               && pot1 t' + tcost t' <= pot12 s + tcost s -- i.e. amortized' t' s
 -}
 {-@ wmapPromL :: f:PromoteL_t
-          -> {s:Tick (Node0_1) | tcost s >= 0} 
-          -> {t':EqT2 s | Tick (tcost s + 1) (f (tval s)) == t' 
-          && RkDiff (tval t') (tval s) 1 
-          && tcost t' == tcost s + 1
-          && pot1 t' + 1 == pot12 s
-          && pot12 s == potT2 (tval s)
-          && amortized' t' s
-              } @-}
-wmapPromL :: (Tree a -> Tree a) -> Tick (Tree a) -> Tick (Tree a)
-wmapPromL f s@(Tick m x) =  Tick (1 + m) (f x)
-                          -- assert (potT2 (tval s) -1 == potT (f x))  ?? 
-                          -- assert (tcost (Tick (1 + m) (f x)) == tcost s + 1) ??
-                          -- assert (pot1 (f x) - potT2 (tval s) == 1) ??
-                          -- assert (potT (tval t') == potT2 (tval s) - 1) ??  
-                          -- assert (pot1 (f x) + tcost (f x) <= pot12 s + tcost s) ?? undefined -- Tick (1 + m) (f x) 
+          -> {s:Node1_1 | (rk s > 0 || (potT s == 0 && potT s == potT (left s) + potT (right s)))
+                       && (rk s == 0  || potT s == potT (left s) + potT (right s) + 1)} 
+          -> {l:EqTL s | eqRk s (tval l) 
+              && (rk s == 0 || amortized1 l (pure (left s)) ) 
+              && (rk s > 0  || amortized  l (pure (left s)) )} 
+          -> {t:EqT s | tval t == (f (Tree (val s) (rk s) (tval l) (right s))) 
+          && tcost t == tcost l + 1
+          && rkDiff s (tval t) 1 
+          && right (tval t) == right s
+          && left (tval t) == (tval l)
+          && isNode0_1 (Tree (val s) (rk s) (tval l) (right s))
+          && potT2 (Tree (val s) (rk s) (tval l) (right s)) == pot1 l + potT (right s) + 1
+          && pot1 t == pot1 l + potT (right s)
+          && amortized1 t (pure s)
+          } @-}
+wmapPromL :: (Tree a -> Tree a) -> Tree a -> Tick (Tree a) -> Tick (Tree a)
+wmapPromL f t l 
+  | rk t == 0 = wmapPromL_1 f t l
+  | otherwise = wmapPromL_2 f t l
+-- 
+-- s having `potT == 0` is written here as an explicit input but could prob. be left out bc of isSingleton
+{-@ wmapPromL_1 :: f:PromoteL_t
+          -> {s:Node1_1 | rk s == 0 && potT s == 0 && potT s == potT (left s) + potT (right s)} 
+          -> {l:EqTL s | amortized l (pure (left s)) && is0Child s (tval l)} 
+          -> {t:EqT s | tval t == (f (Tree (val s) (rk s) (tval l) (right s))) 
+          && tcost t == tcost l + 1
+          && rkDiff s (tval t) 1 
+          && right (tval t) == right s
+          && left (tval t) == (tval l)
+          && isNode0_1 (Tree (val s) (rk s) (tval l) (right s))
+          && potT2 (Tree (val s) (rk s) (tval l) (right s)) = 1
+          && pot1 t = 0
+          && amortized1 t (pure s)
+          } @-}
+wmapPromL_1 :: (Tree a -> Tree a) -> Tree a -> Tick (Tree a) -> Tick (Tree a)
+wmapPromL_1 f (Tree x n l r) (Tick cl vl) =  Tick (1 + cl) (f (Tree x n vl r))
+
+{-@ wmapPromL_2 :: f:PromoteL_t
+          -> {s:Node1_1 | rk s > 0 && potT s == potT (left s) + potT (right s) + 1} 
+          -> {l:EqTL s | amortized1 l (pure (left s)) && is0Child s (tval l)} 
+          -> {t:EqT s | tval t == (f (Tree (val s) (rk s) (tval l) (right s))) 
+          && tcost t == tcost l + 1
+          && rkDiff s (tval t) 1 
+          && right (tval t) == right s
+          && left (tval t) == (tval l)
+          && isNode0_1 (Tree (val s) (rk s) (tval l) (right s))
+          && potT2 (Tree (val s) (rk s) (tval l) (right s)) == pot1 l + potT (right s) + 1
+          && pot1 t == pot1 l + potT (right s)
+          && amortized1 t (pure s)
+          } @-}
+wmapPromL_2 :: (Tree a -> Tree a) -> Tree a -> Tick (Tree a) -> Tick (Tree a)
+wmapPromL_2 f (Tree x n l r) (Tick cl vl) =  Tick (1 + cl) (f (Tree x n vl r))
+
+-- {-@ wmapPromL_2 :: f:PromoteL_t
+--           -> s:Node1_1 
+--           -> {l':Tick (Node0_1) | tcost s >= 0} 
+--           -> {v:EqT s | Tick (tcost s + 1) (f (tval s)) == t' 
+--           && RkDiff (tval t') (tval s) 1 
+--           && tcost t' == tcost s + 1
+--           && pot1 t' + 1 == pot12 s
+--           && pot12 s == potT2 (tval s)
+--           && amortized' t' s
+--               } @-}
+-- wmapPromL_2 :: (Tree a -> Tree a) -> Tree -> Tick (Tree a) -> Tick (Tree a)
+-- wmapPromL f (Tree x n l r) (Tick cl vl) =  Tick (1 + cl) (f (Tree x n vl r))
 
 -- use only for promoteR
 {-@ wmapPromR :: f:PromoteR_t 

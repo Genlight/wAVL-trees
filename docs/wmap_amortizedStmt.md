@@ -135,6 +135,7 @@ Thus the same should apply for all other rotations / steps, i.e. we only check f
 
 there is the case with `n=0` | `isNode1_1 t` which results in `potT t = 0` and `potT t == potT r + potT l`, i.e. the insertion of a node can create potential, in the step right after the singleton case. 
 
-This leads altogether to a different amortized statement: 
-```haskell
-```
+# Solution
+
+analog to treeLW1 using case distinctions, i found that i could define two sub-functions, i.e. `wmapPromL_1` and `wmapPromL_2` and that worked out. 
+But now i have a more complex input type for `wmapPromL` which may not work with the refinements in `insert`.
