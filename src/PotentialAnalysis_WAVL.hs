@@ -519,9 +519,11 @@ treeLW1 x n l r = Tick (tcost l) (Tree x n (tval l) r)
           -> {v:Tick ({v':NEWavl | right v' == right s && Is2Child v' (tval l) && rk s == rk v' && IsWavlNode v' }) 
           | tcost v == tcost l
             && tval v == Tree (val s) (rk s) (tval l) (right s)
-            && amortized3 v (pure s)
+            && potT (left s) + 3 >= pot1 l + tcost l 
+            && potT (right s) == potT (right (tval v))
+            && pot1 v >= pot1 l + potT (right s)
             && is2Child (tval v) (tval l)
-           } @-}
+            } @-}
 treeLW2 :: Tree a -> Tick(Tree a) -> Tick(Tree a)
 treeLW2 t@(Tree x n _ r) l = Tick (tcost l) (Tree x n (tval l) r)
 
