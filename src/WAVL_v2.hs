@@ -67,7 +67,8 @@ insert x t@(Tree v n l r) = case compare x v of
         insR 
             | rk r' < rk t = Tree x n l r'
             | isNode1_1 t = promoteR t r'
-            | otherwise = undefined
+            | isNode2_1 t && isNode2_1 r' = rotateLeft t r'
+            | isNode2_1 t && isNode1_2 r' = rotateDoubleLeft t r'
 
 --  && ((rkDiff s t 1 && rk s > 1) => (isNode1_2 t || isNode2_1 t)) 
 {-@ delete :: (Ord a) => a -> s:Tree a -> {t:Tree a | ((rkDiff s t 0) || (rkDiff s t 1))  } @-}
@@ -156,7 +157,6 @@ promoteL t@(Tree a n _ r) l = (Tree a (n+1) l r)
 promoteR :: Tree a -> Tree a -> Tree a
 promoteR t@(Tree a n l _) r = (Tree a (n+1) l r)
 
--- {-@ rotateRight :: {v:Node0_2 | IsNode1_2 (left v) } -> Tree a -> {t:NEWavl | EqRk v t } @-}
 {-@ rotateRight :: {t:NEWavl | isNode1_2 t} 
                     -> {l:NEWavl | isNode1_2 l && rk t == rk l} -> {v:NEWavl | rkDiff t v 0 } @-}
 rotateRight :: Tree a -> Tree a -> Tree a
@@ -166,6 +166,13 @@ rotateRight t@(Tree x n _ c) l@(Tree y m a b) = Tree y m a (Tree x (n-1) b c)
 rotateDoubleRight :: Tree a -> Tree a  -> Tree a 
 rotateDoubleRight (Tree z n _ d) l@(Tree x m a (Tree y o b c)) =  Tree y (o+1) (Tree x (m-1) a b) (Tree z (n-1) c d) 
 
+{-@ rotateLeft :: {t:NEWavl | isNode2_1 t} -> {r:NEWavl | isNode2_1 r && rk r == rk t} -> {v:NEWavl | rkDiff t v 0 } @-}
+rotateLeft :: Tree a -> Tree a -> Tree a
+rotateLeft t@(Tree x n a _) r@(Tree y m b c) = Tree y m (Tree x (n-1) a b) c
+
+{-@ rotateDoubleLeft :: {t:NEWavl | isNode2_1 t} -> {r:NEWavl | isNode1_2 r && rk r == rk t} -> {v:NEWavl | rkDiff t v 0 } @-}
+rotateDoubleLeft :: Tree a -> Tree a -> Tree a
+rotateDoubleLeft (Tree x n a _) r@(Tree y m (Tree z o b_1 b_2) c) = Tree z (o+1) (Tree x (n-1) a b_1) (Tree y (m-1) b_2 c) 
 
 {-@ reflect ?? @-}
 {-@ (??) :: a -> y:b -> {v:b | v == y } @-}
