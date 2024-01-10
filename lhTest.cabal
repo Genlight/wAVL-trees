@@ -23,11 +23,12 @@ library
     --   WAVL_With_Rankdiff,     
     --   AVL,
       -- WAVL,
-      PotentialAnalysis_WAVL
+      -- PotentialAnalysis_WAVL
       -- RBTree 
       -- RBTree_v2
       -- BinomialHeap
     -- PopPush
+    WAVL_v2
   hs-source-dirs:
       src
   build-depends:

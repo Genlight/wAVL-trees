@@ -46,7 +46,6 @@ empty _ = False
 rkDiff :: Tree a -> Tree a -> Int -> Bool
 rkDiff t s n = rk t - rk s  == n
 
--- {-@ insert :: (Ord a) => a -> s:Wavl -> {t:NEWavl | ((rkDiff t s 1) || (rkDiff t s 0)) } @-}
 {-@ insert :: (Ord a) => a -> s:Tree a -> {t:NEWavl | ((rkDiff t s 1) || (rkDiff t s 0)) 
                     && ((rkDiff t s 1 && rk s >= 0) => (isNode1_2 t || isNode2_1 t))
                      } @-}
@@ -75,27 +74,27 @@ insert x t@(Tree v n l r) = case compare x v of
 delete::  (Ord a) => a -> Tree a -> Tree a
 delete _ Nil = Nil
 delete y t@(Tree x n l r) = case compare x y of
-    LT -> balLDel
+    LT -> delL
     GT -> undefined -- balRDel x n l r'
     EQ -> undefined -- merge y l r n 
     where
         l' = delete x l
         -- r' = delete x r
-        balLDel 
+        delL 
             | n <= (rk l') + 2 = Tree x n l' r
             | n == (rk l') + 3 && (rk r) + 2 == n                            = demoteL t l' -- assert (n == rk l + 2 => n >= 2) ?? assert (not (empty r)) ??
             | n == (rk l') + 3 && (rk r) + 1 == n && isNode2_2 r             = doubleDemoteL t l'
             | n == (rk l') + 3 && (rk r) + 1 == n && rk (left r) + 1 == rk r = undefined -- rotateLeftD t
             | n == (rk l') + 3 && (rk r) + 1 == n && isNode2_1 r             = undefined -- rotateDoubleLeftD t
-            | otherwise = 
-                -- assert (n == (rk l') + 3 && (rk r) + 1 == n) ?? 
-                -- assert (not (empty r)) ??
-                -- assert (not (isNode1_1 r)) ??
-                -- assert (not (isNode1_2 r)) ??
-                -- assert (not (isNode2_1 r)) ??
-                assert (wavlStructLemma r ?? not (isWavlNode r)) ??
-                -- assert (not (isNode2_2 r)) ?? 
-                assert (False) ?? undefined
+            | otherwise = undefined
+            --     -- assert (n == (rk l') + 3 && (rk r) + 1 == n) ?? 
+            --     -- assert (not (empty r)) ??
+            --     -- assert (not (isNode1_1 r)) ??
+            --     -- assert (not (isNode1_2 r)) ??
+            --     -- assert (not (isNode2_1 r)) ??
+            --     -- assert (not (isNode2_2 r)) ?? 
+            --     assert (wavlStructLemma r ?? not (isWavlNode r)) ?? assert (False) -- these two statements prove true even if it should not!!
+            --     ?? undefined
 
 
 balLDel = undefined
