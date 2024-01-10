@@ -1,7 +1,7 @@
 {-@ LIQUID "--short-names" @-}
 {-@ LIQUID "--bscope" @-}
 {-@ LIQUID "--reflection" @-}
--- {-@ LIQUID "--ple" @-}
+-- {-@ LIQUID "--diff" @-}
 
 module WAVL_v2 where
 
@@ -19,8 +19,8 @@ data Tree a = Nil | Tree { val :: a, rd :: Int, left :: (Tree a), right :: (Tree
 {-@ type ChildT a K = {v:Tree a | rk v < K && K <= rk v + 2 } @-}
 -- && ((notEmptyTree l) || (notEmptyTree r) || (n == 0)) -- disallow 2,2-leafs
 
-{-@ type Wavl = {v:Tree a | structLemma v } @-}
-{-@ type NEWavl = {v:Tree a | not (empty v) } @-}
+{-@ type Wavl = {v:Tree a | True } @-} -- structLemma v
+{-@ type NEWavl = {v:Wavl | not (empty v) } @-}
 -- {-@ type NEWavl = {v:Wavl | not (empty v) } @-}
 
 {-@ measure structLemma @-}
@@ -46,7 +46,7 @@ empty _ = False
 rkDiff :: Tree a -> Tree a -> Int -> Bool
 rkDiff t s n = rk t - rk s  == n
 
-{-@ insert :: (Ord a) => a -> s:Tree a -> {t:NEWavl | ((rkDiff t s 1) || (rkDiff t s 0)) 
+{-@ insert :: (Ord a) => a -> s:Wavl -> {t:NEWavl | ((rkDiff t s 1) || (rkDiff t s 0)) 
                     && ((rkDiff t s 1 && rk s >= 0) => (isNode1_2 t || isNode2_1 t))
                      } @-}
 insert :: (Ord a) => a -> Tree a -> Tree a
@@ -70,7 +70,7 @@ insert x t@(Tree v n l r) = case compare x v of
             | isNode2_1 t && isNode1_2 r' = rotateDoubleLeft t r'
 
 --  && ((rkDiff s t 1 && rk s > 1) => (isNode1_2 t || isNode2_1 t)) 
-{-@ delete :: (Ord a) => a -> s:Tree a -> {t:Tree a | ((rkDiff s t 0) || (rkDiff s t 1))  } @-}
+{-@ delete :: (Ord a) => a -> s:Wavl -> {t:Wavl | ((rkDiff s t 0) || (rkDiff s t 1))  } @-}
 delete::  (Ord a) => a -> Tree a -> Tree a
 delete _ Nil = Nil
 delete y t@(Tree x n l r) = case compare x y of
@@ -84,31 +84,50 @@ delete y t@(Tree x n l r) = case compare x y of
             | n <= (rk l') + 2 = Tree x n l' r
             | n == (rk l') + 3 && (rk r) + 2 == n                            = demoteL t l' -- assert (n == rk l + 2 => n >= 2) ?? assert (not (empty r)) ??
             | n == (rk l') + 3 && (rk r) + 1 == n && isNode2_2 r             = doubleDemoteL t l'
-            | n == (rk l') + 3 && (rk r) + 1 == n && rk (left r) + 1 == rk r = undefined -- rotateLeftD t
-            | n == (rk l') + 3 && (rk r) + 1 == n && isNode2_1 r             = undefined -- rotateDoubleLeftD t
-            | otherwise = undefined
-            --     -- assert (n == (rk l') + 3 && (rk r) + 1 == n) ?? 
-            --     -- assert (not (empty r)) ??
-            --     -- assert (not (isNode1_1 r)) ??
-            --     -- assert (not (isNode1_2 r)) ??
-            --     -- assert (not (isNode2_1 r)) ??
-            --     -- assert (not (isNode2_2 r)) ?? 
-            --     assert (wavlStructLemma r ?? not (isWavlNode r)) ?? assert (False) -- these two statements prove true even if it should not!!
+            | n == (rk l') + 3 && (rk r) + 1 == n && child1 r (right r)      = rotateLeftD t l'
+            | n == (rk l') + 3 && (rk r) + 1 == n && isNode1_2 r             = rotateDoubleLeftD t l'
+            | n == (rk l') + 3 && (rk r) + 1 == n = undefined
+            -- | otherwise = assert (not (empty r)) -- ?? assert (not (isWavlNode r))
+            --    ?? assert (n == (rk l') + 3 && (rk r) + 1 == n) 
+            -- -- --     -- assert (not (empty r)) ??
+            -- -- --     -- assert (not (isNode1_1 r)) ??
+            -- -- --     -- assert (not (isNode1_2 r)) ??
+            -- -- --     -- assert (not (isNode2_1 r)) ??
+            -- -- --     -- assert (not (isNode2_2 r)) ?? 
+            --     ?? assert (wavlStructLemma r ?? not (isWavlNode r)) ?? assert (False) -- these two statements prove true even if it should not!!
             --     ?? undefined
 
 
-balLDel = undefined
+
+balLDel t l = undefined
+
+
 balRDel = undefined
 
-{-@ demoteL :: {t:NEWavl | isNode2_2 t} -> {l:Tree a | rk l + 3 == rk t} -> {v:NEWavl | rk v + 1 == rk t && isNode2_1 v } @-}
+{-@ demoteL :: {t:NEWavl | isNode2_2 t} -> {l:Wavl | rk l + 3 == rk t} -> {v:NEWavl | rk v + 1 == rk t && isNode2_1 v } @-}
 demoteL :: Tree a -> Tree a -> Tree a
 demoteL t@(Tree a n _ r) l = Tree a (n - 1) l r
 
 
 -- {-@ doubleDemoteL :: {s:Node3_1 | IsNode2_2 (right s) } -> {t:NEWavl | RkDiff s t 1 && potT2 s == potT2 t + 1 } @-}
-{-@ doubleDemoteL :: {t:NEWavl | isNode2_1 t && isNode2_2 (right t)} -> {l:Tree a | rk l  + 3 == rk t } -> {v:NEWavl | rkDiff t v 1 && isNode2_1 v } @-}
+{-@ doubleDemoteL :: {t:NEWavl | isNode2_1 t && isNode2_2 (right t)} -> {l:Wavl | rk l  + 3 == rk t } -> {v:NEWavl | rkDiff t v 1 && isNode2_1 v } @-}
 doubleDemoteL :: Tree a -> Tree a -> Tree a
 doubleDemoteL (Tree x n _ (Tree y m rl rr)) l = (Tree x (n-1) l (Tree x (m-1) rl rr))
+
+{-@ rotateLeftD :: {t:NEWavl | isNode2_1 t && child1 (right t) (right (right t))} -> {l:Wavl | child3 t l}  -> {v:NEWavl | rkDiff t v 0} @-}
+rotateLeftD :: Tree a -> Tree a  -> Tree a 
+rotateLeftD t@(Tree z n _ (Tree y m rl@Nil rr)) l@Nil = Tree y (m+1) (leaf z) rr
+rotateLeftD t@(Tree z n _ (Tree y m rl rr)) l = Tree y (m+1) (Tree z (n-1) l rl) rr 
+
+-- {-@ rotateDoubleLeftD :: {s:Node3_1 | IsNode1_2 (right s) 
+--           && (potT (left s)) + (potT (right s)) == potT2 s } 
+--           -> {t:NEWavl | EqRk s t && potT2 s <= potT2 t } @-}
+-- rotateDoubleLeftD :: Tree a -> Tree a
+-- rotateDoubleLeftD (Tree z n l (Tree y m (Tree x o rll rlr) rr)) = Tree x n (Tree z (n-2) l rll) (Tree y (n-2) rlr rr)
+
+{-@ rotateDoubleLeftD :: {t:NEWavl | isNode2_1 t && isNode1_2 (right t)} -> {l:Wavl | child3 t l}  -> {v:NEWavl | rkDiff t v 0} @-}
+rotateDoubleLeftD :: Tree a -> Tree a -> Tree a
+rotateDoubleLeftD (Tree z n _ (Tree y m (Tree x o rll rlr) rr)) l = Tree x n (Tree z (n-2) l rll) (Tree y (n-2) rlr rr)
 
 -- {-@ merge :: x:a -> l:Tree a -> r:Tree a 
 --                     -> {v:Nat | v > rk l && v < rk r && v <= rk l + 2 && v <= rk r + 2 && (not (empty (l) || not (empty r) || v == 0)) } 
@@ -120,8 +139,6 @@ doubleDemoteL (Tree x n _ (Tree y m rl rr)) l = (Tree x (n-1) l (Tree x (m-1) rl
 -- merge x l r n    = (balRDel y n l r')
 --   where
 --    (r', y)     = undefined -- getMin r
-
-
 
 {-@ type EqW s = {t:NEWavl | (rkDiff t s 0 || rkDiff t s 1) 
                     && (not (isNode2_2 t) || (rkDiff t s 0)) 
@@ -147,6 +164,14 @@ isNode2_1 t = rk (left t) + 2 == rk t && rk t == rk (right t) + 1 -- && not (emp
 {-@ inline isNode2_2 @-}
 isNode2_2 :: Tree a -> Bool
 isNode2_2 t = rk (left t) + 2 == rk t && rk t == rk (right t) + 2 -- && not (empty (right t)) && not (empty (left t))
+
+{-@ inline child1 @-}
+child1 :: Tree a -> Tree a -> Bool
+child1 t s = rk t == rk s + 1
+
+{-@ inline child3 @-}
+child3 :: Tree a -> Tree a -> Bool
+child3 t s = rk t == rk s + 3
 
 {-@ promoteL :: {t:NEWavl | isNode1_1 t} -> {l:NEWavl | rk t == rk l} -> {v:NEWavl | rk t + 1 == rk v && left v == l && right t == right v} @-}
 promoteL :: Tree a -> Tree a -> Tree a
