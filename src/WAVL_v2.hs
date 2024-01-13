@@ -17,7 +17,6 @@ import Language.Haskell.Liquid.ProofCombinators
 data Tree a = Nil | Tree { val :: a, rd :: Int, left :: (Tree a), right :: (Tree a)} deriving Show
 
 {-@ type ChildT a K = {v:Tree a | rk v < K && K <= rk v + 2 } @-}
--- && ((notEmptyTree l) || (notEmptyTree r) || (n == 0)) -- disallow 2,2-leafs
 
 {-@ type Wavl = {v:Tree a | structLemma v } @-} -- structLemma v
 {-@ type NEWavl = {v:Wavl | not (empty v) } @-}
@@ -87,7 +86,7 @@ merge t@(Tree _ n Nil r) = r
 merge t@(Tree _ n l Nil) = l
 merge t@(Tree _ n l r)   = delR (Tree x n l r) r'
     where 
-        (r', x)     = undefined -- getMin r
+        (r', x)     = getMin r
 
 {-@ delR :: t:NEWavl -> {r:Wavl | ((rkDiff (right t) r 0) || (rkDiff (right t) r 1))} -> {v:NEWavl | ((rkDiff t v 0) || (rkDiff t v 1))} @-}
 delR t@(Tree _ n l _) r 
@@ -101,7 +100,12 @@ delL t@(Tree _ n _ r) l
         | child3 t l && child2 t r = demoteL t l
         | child3 t l = balLDel t l
 
-getMin t = undefined
+{-@  getMin :: t:NEWavl -> ({v:Wavl | (rkDiff t v 0) || (rkDiff t v 1) }, a) @-} 
+getMin :: Tree a -> (Tree a, a)
+getMin (Tree x _ Nil r) = (r, x)
+getMin t@(Tree x n l r) = (delL t l', x')
+  where
+    (l', x')             = getMin l
 
 {-@ balLDel :: {t:NEWavl | child2 t (left t) && child1 t (right t) } -> {l:Wavl | child3 t l } -> {v:NEWavl | ((rkDiff t v 0) || (rkDiff t v 1)) } @-}
 balLDel :: Tree a -> Tree a -> Tree a
@@ -169,7 +173,7 @@ isNode2_1 t = rk (left t) + 2 == rk t && rk t == rk (right t) + 1 && not (empty 
 
 {-@ inline isNode2_2 @-}
 isNode2_2 :: Tree a -> Bool
-isNode2_2 t = rk (left t) + 2 == rk t && rk t == rk (right t) + 2 && not (empty (right t)) && not (empty (left t))
+isNode2_2 t = rk (left t) + 2 == rk t && rk t == rk (right t) + 2 && not (empty (right t)) && not (empty (left t)) -- <- this one prohibits 2,2-leafs!!
 
 {-@ inline child1 @-}
 child1 :: Tree a -> Tree a -> Bool
