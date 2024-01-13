@@ -75,17 +75,17 @@ delete _ Nil = Nil
 delete y t@(Tree x n l r) = case compare x y of
     LT -> delL t l'
     GT -> delR t r'
-    EQ -> merge y t 
+    EQ -> merge t 
     where
         l' = delete x l
         r' = delete x r
 
-{-@ merge :: a -> s:NEWavl -> {t:Wavl | ((rkDiff s t 0) || (rkDiff s t 1))} @-}
-merge :: a -> Tree a -> Tree a
-merge _ t@(Tree _ n Nil Nil) = Nil
-merge _ t@(Tree _ n Nil r) = r
-merge _ t@(Tree _ n l Nil) = l
-merge _ t@(Tree _ n l r)   = delR (Tree x n l r) r'
+{-@ merge :: s:NEWavl -> {t:Wavl | ((rkDiff s t 0) || (rkDiff s t 1))} @-}
+merge :: Tree a -> Tree a
+merge t@(Tree _ n Nil Nil) = Nil
+merge t@(Tree _ n Nil r) = r
+merge t@(Tree _ n l Nil) = l
+merge t@(Tree _ n l r)   = delR (Tree x n l r) r'
     where 
         (r', x)     = undefined -- getMin r
 
@@ -150,22 +150,6 @@ rotateRightD (Tree x n (Tree y m ll lr) _) r= Tree y (m+1) ll (Tree x (n-1) lr r
 {-@ rotateDoubleRightD :: {t:NEWavl | isNode1_2 t && isNode2_1 (left t)} -> {r:Wavl | child3 t r}  -> {v:NEWavl | rkDiff t v 0} @-}
 rotateDoubleRightD :: Tree a -> Tree a -> Tree a
 rotateDoubleRightD (Tree x n (Tree y m ll (Tree z o lrl lrr)) _) r = Tree z (o+2) (Tree y (m-1) ll lrl) (Tree x (n-2) lrr r)
-
--- {-@ merge :: x:a -> l:Tree a -> r:Tree a 
---                     -> {v:Nat | v > rk l && v < rk r && v <= rk l + 2 && v <= rk r + 2 && (not (empty (l) || not (empty r) || v == 0)) } 
---                     -> {t:Tree a | (v == rk t) || (v == rk t + 1) } @-}
--- merge :: a -> Tree a -> Tree a -> Int ->  Tree a
--- merge _ Nil Nil _ = Nil
--- merge _ Nil r _  = r
--- merge _ l Nil _  = l
--- merge x l r n    = (balRDel y n l r')
---   where
---    (r', y)     = undefined -- getMin r
-
-{-@ type EqW s = {t:NEWavl | (rkDiff t s 0 || rkDiff t s 1) 
-                    && (not (isNode2_2 t) || (rkDiff t s 0)) 
-                    && ((not (isNode1_1 t && rk t > 0)) || rkDiff t s 0) 
-                    && isWavlNode t } @-}
 
 {-@ inline isWavlNode @-}
 isWavlNode :: Tree a -> Bool
