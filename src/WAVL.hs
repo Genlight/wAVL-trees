@@ -1,6 +1,7 @@
 {-@ LIQUID "--short-names" @-}
 {-@ LIQUID "--reflection" @-}
 {-@ LIQUID "--ple" @-}
+{-@ LIQUID "--diff" @-}
 
 module WAVL (Tree (..), singleton,
  insert, delete, rk, 
@@ -190,6 +191,7 @@ rotateDoubleLeft (Tree x n a (Tree y m (Tree z o b_1 b_2) c)) = Tree z (o+1) (Tr
 
 -- Deletion functions
 -- {-@ delete :: (Ord a) => a -> s:Wavl -> {t:Wavl | (EqRk s t) || (RkDiff s t 1)} @-}
+-- delete :: (Ord a) => a -> Tree a -> Tree a
 -- delete _ Nil = nil
 -- delete y (Tree x n l r)
 --   | y < x     = balLDel x n l' r
@@ -201,6 +203,7 @@ rotateDoubleLeft (Tree x n a (Tree y m (Tree z o b_1 b_2) c)) = Tree z (o+1) (Tr
       
 -- Deletion functions, but with cases for Tree expanded
 {-@ delete :: (Ord a) => a -> s:Wavl -> {t:Wavl | (EqRk s t) || (RkDiff s t 1)} @-}
+delete :: (Ord a) => a -> Tree a -> Tree a
 delete _ Nil = nil
 delete y (Tree x n l@Nil r@Nil)
   | y < x     = balLDel x n l' r
