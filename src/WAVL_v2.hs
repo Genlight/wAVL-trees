@@ -89,16 +89,28 @@ merge t@(Tree _ n l r)   = delR (Tree x n l r) r'
         (r', x)     = getMin r
 
 {-@ delR :: t:NEWavl -> {r:Wavl | ((rkDiff (right t) r 0) || (rkDiff (right t) r 1))} -> {v:NEWavl | ((rkDiff t v 0) || (rkDiff t v 1))} @-}
-delR t@(Tree _ n l _) r 
-        | rk t <= rk r + 2 = undefined -- Tree x n l r' -- ->  structlemma does not arise from it
+delR t@(Tree x n l _) r 
+        | rk t <= rk r + 2 = treeR t r
         | child3 t r && child2 t l = demoteR t r
         | child3 t r = balRDel t r
 
 {-@ delL :: t:NEWavl -> {l:Wavl | ((rkDiff (left t) l 0) || (rkDiff (left t) l 1))} -> {v:NEWavl | ((rkDiff t v 0) || (rkDiff t v 1))} @-}
-delL t@(Tree _ n _ r) l 
-        | n <= rk l + 2 = undefined -- Tree x n l' r
+delL t@(Tree x n _ r) l 
+        | n <= rk l + 2 = treeL t l
         | child3 t l && child2 t r = demoteL t l
         | child3 t l = balLDel t l
+
+{-@ treeL :: t:NEWavl -> {l:Wavl | ((rkDiff (left t) l 0) || (rkDiff (left t) l 1)) && rk t <= rk l + 2} 
+                    -> {v:NEWavl | (rkDiff t v 0) || (rkDiff t v 1)} @-} 
+treeL :: Tree a -> Tree a -> Tree a
+treeL (Tree x 1 (Tree _ 0 Nil Nil) Nil) Nil = leaf x
+treeL (Tree x n _ r) l = Tree x n l r 
+
+{-@ treeR :: t:NEWavl -> {r:Wavl | ((rkDiff (right t) r 0) || (rkDiff (right t) r 1)) && rk t <= rk r + 2} 
+                    -> {v:NEWavl | (rkDiff t v 0) || (rkDiff t v 1)} @-} 
+treeR :: Tree a -> Tree a -> Tree a
+treeR (Tree x 1 Nil (Tree _ 0 Nil Nil)) Nil = leaf x
+treeR (Tree x n l _) r = Tree x n l r 
 
 {-@  getMin :: t:NEWavl -> ({v:Wavl | (rkDiff t v 0) || (rkDiff t v 1) }, a) @-} 
 getMin :: Tree a -> (Tree a, a)
