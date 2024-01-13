@@ -89,16 +89,22 @@ merge t@(Tree _ n l r)   = delR (Tree x n l r) r'
         (r', x)     = getMin r
 
 {-@ delR :: t:NEWavl -> {r:Wavl | ((rkDiff (right t) r 0) || (rkDiff (right t) r 1))} -> {v:NEWavl | ((rkDiff t v 0) || (rkDiff t v 1))} @-}
-delR t@(Tree x n l _) r 
+delR t@(Tree x n Nil _) r = treeR t r
+delR t@(Tree x n l@(Tree _ _ ll lr) _) r 
         | rk t <= rk r + 2 = treeR t r
         | child3 t r && child2 t l = demoteR t r
-        | child3 t r = balRDel t r
+        | child3 t r && child2 l lr && child2 l ll = doubleDemoteR t r
+        | child3 t r && child1 l ll = rotateRightD t r
+        | child3 t r && child1 l lr = rotateDoubleRightD t r
 
 {-@ delL :: t:NEWavl -> {l:Wavl | ((rkDiff (left t) l 0) || (rkDiff (left t) l 1))} -> {v:NEWavl | ((rkDiff t v 0) || (rkDiff t v 1))} @-}
-delL t@(Tree x n _ r) l 
+delL t@(Tree x n _ r@Nil) l = treeL t l
+delL t@(Tree x n _ r@(Tree _ _ rl rr)) l 
         | n <= rk l + 2 = treeL t l
         | child3 t l && child2 t r = demoteL t l
-        | child3 t l = balLDel t l
+        | child3 t l && child2 r rr && child2 r rl = doubleDemoteL t l
+        | child3 t l && child1 r rr = rotateLeftD t l
+        | child3 t l && child1 r rl = rotateDoubleLeftD t l
 
 {-@ treeL :: t:NEWavl -> {l:Wavl | ((rkDiff (left t) l 0) || (rkDiff (left t) l 1)) && rk t <= rk l + 2} 
                     -> {v:NEWavl | (rkDiff t v 0) || (rkDiff t v 1)} @-} 
@@ -118,20 +124,6 @@ getMin (Tree x _ Nil r) = (r, x)
 getMin t@(Tree x n l r) = (delL t l', x')
   where
     (l', x')             = getMin l
-
-{-@ balLDel :: {t:NEWavl | child2 t (left t) && child1 t (right t) } -> {l:Wavl | child3 t l } -> {v:NEWavl | ((rkDiff t v 0) || (rkDiff t v 1)) } @-}
-balLDel :: Tree a -> Tree a -> Tree a
-balLDel t@(Tree x n _ r@(Tree _ m rl rr)) l 
-            | child2 r rr && child2 r rl = doubleDemoteL t l
-            | child1 r rr = rotateLeftD t l
-            | child1 r rl = rotateDoubleLeftD t l
-
-{-@ balRDel :: {t:NEWavl | child2 t (right t) && child1 t (left t) } -> {r:Wavl | child3 t r } -> {v:NEWavl | ((rkDiff t v 0) || (rkDiff t v 1)) } @-}
-balRDel :: Tree a -> Tree a -> Tree a
-balRDel t@(Tree x n l@(Tree _ m ll lr) _) r 
-            |  child2 l lr && child2 l ll = doubleDemoteR t r
-            |  child1 l ll = rotateRightD t r
-            |  child1 l lr = rotateDoubleRightD t r
 
 {-@ demoteL :: {t:NEWavl | isNode2_2 t} -> {l:Wavl | child3 t l} -> {v:NEWavl | rkDiff t v 1 && isNode2_1 v } @-}
 demoteL :: Tree a -> Tree a -> Tree a
