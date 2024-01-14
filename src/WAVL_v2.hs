@@ -1,7 +1,7 @@
 {-@ LIQUID "--short-names" @-}
 -- {-@ LIQUID "--bscope" @-}
 {-@ LIQUID "--reflection" @-}
--- {-@ LIQUID "--diff" @-}
+{-@ LIQUID "--diff" @-}
 
 module WAVL_v2 where
 
