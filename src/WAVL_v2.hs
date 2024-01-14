@@ -9,7 +9,6 @@ import Language.Haskell.Liquid.ProofCombinators
 -- import Language.Haskell.Liquid.RTick as RTick
 
 -- Basic functions
--- {-@ data Tree [rd] a = Nil | Tree { val :: a, 
 {-@ data Tree [rk] a = Nil | Tree { val :: a, 
                                     rd :: {v:Int | v >= 0}, 
                                     left :: ChildT a rd,
@@ -191,11 +190,11 @@ child2 t s = rk t == rk s + 2
 child3 :: Tree a -> Tree a -> Bool
 child3 t s = rk t == rk s + 3
 
-{-@ promoteL :: {t:NEWavl | isNode1_1 t} -> {l:NEWavl | rk t == rk l} -> {v:NEWavl | rk t + 1 == rk v && left v == l && right t == right v} @-}
+{-@ promoteL :: {t:NEWavl | isNode1_1 t} -> {l:NEWavl | rk t == rk l} -> {v:NEWavl | rkDiff v t 1 && isNode1_2 v} @-}
 promoteL :: Tree a -> Tree a -> Tree a
 promoteL t@(Tree a n _ r) l = (Tree a (n+1) l r)
 
-{-@ promoteR :: {t:NEWavl | isNode1_1 t} -> {r:NEWavl | rk t == rk r} -> {v:NEWavl | rk t + 1 == rk v && right v == r && left t == left v} @-}
+{-@ promoteR :: {t:NEWavl | isNode1_1 t} -> {r:NEWavl | rk t == rk r} -> {v:NEWavl | rkDiff v t 1 && isNode2_1 v} @-}
 promoteR :: Tree a -> Tree a -> Tree a
 promoteR t@(Tree a n l _) r = (Tree a (n+1) l r)
 
