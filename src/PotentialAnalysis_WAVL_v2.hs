@@ -75,7 +75,7 @@ insert x t@(Tree v n l r) = case compare x v of
         l'' = tval l'
         r'' = tval r'
         insL 
-            | rk (tval l') < rk t = undefined -- Tree x n l' r 
+            | rk (tval l') < rk t = undefined -- inTreeL t l'
             | isNode1_1 t = assert (rk (tval l') == rk t) ?? undefined -- wmapPromoteL t l'
             | isNode1_2 t && isNode1_2 l'' = undefined -- fmapRotateRight t l'
             | isNode1_2 t && isNode2_1 l'' = undefined -- rotateDoubleRight t l'
@@ -84,6 +84,7 @@ insert x t@(Tree v n l r) = case compare x v of
             | isNode1_1 t = undefined -- promoteR t r'
             | isNode2_1 t && isNode2_1 r'' = undefined -- rotateLeft t r'
             | isNode2_1 t && isNode1_2 r'' = undefined -- rotateDoubleLeft t r'
+
 
 {- 
 {-@ delete :: (Ord a) => a -> s:Wavl -> {t:Wavl | ((rkDiff s t 0) || (rkDiff s t 1))} @-}
@@ -277,6 +278,20 @@ fmapRotateLeft t@(Tree x n a _) (Tick tl (Tree y m b c)) = Tick tl (Tree y m (Tr
                     -> {v:Tick ({v':NEWavl | rkDiff t v' 0 }) | amortized3 t v} @-}
 fmapRotateDoubleLeft :: Tree a -> Tick (Tree a) -> Tick (Tree a)
 fmapRotateDoubleLeft (Tree x n a _) (Tick (tl) (Tree y m (Tree z o b_1 b_2) c)) = Tick tl (Tree z (o+1) (Tree x (n-1) a b_1) (Tree y (m-1) b_2 c)) 
+
+{-@ inTreeL :: t:NEWavl -> {l:Tick ({l':NEWavl | rk l' < rk t && (rkDiff l' (left t) 0 || rkDiff l' (left t) 1)}) |
+                     (rkDiff (tval l) (left t) 0 => amortized3 (left t) l) &&
+                     (rkDiff (tval l) (left t) 1 => amortized1 (left t) l) } 
+                    -> {v:Tick ({v':NEWavl | rkDiff t v' 0}) | amortized3 t v } @-} -- amortized3 t v
+inTreeL :: Tree a -> Tick (Tree a) -> Tick (Tree a)
+inTreeL t@(Tree x n _ r) l = Tick (tcost l) (Tree x n (tval l) r)
+
+{-@ inTreeR :: t:NEWavl -> {r:Tick ({r':NEWavl | rk r' < rk t && (rkDiff r' (right t) 0 || rkDiff r' (right t) 1)}) |
+                     (rkDiff (tval r) (right t) 0 => amortized3 (right t) r) &&
+                     (rkDiff (tval r) (right t) 1 => amortized1 (right t) r) } 
+                    -> {v:Tick ({v':NEWavl | rkDiff t v' 0}) | amortized3 t v } @-}
+inTreeR :: Tree a -> Tick (Tree a) -> Tick (Tree a)
+inTreeR t@(Tree x n l _) r = Tick (tcost r) (Tree x n l (tval r))
 
 {-@ inline amortized3 @-}
 {-@ amortized3 :: Wavl -> Tick (Wavl) -> Bool @-}
