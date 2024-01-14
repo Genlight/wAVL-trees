@@ -61,8 +61,9 @@ rkDiff t s n = rk t - rk s  == n
 
 {-@ insert :: (Ord a) => a -> s:Wavl -> {t':Tick ({t:NEWavl | ((rkDiff t s 1) || (rkDiff t s 0)) 
                     && ((rkDiff t s 1 && rk s >= 0) => (isNode1_2 t || isNode2_1 t)) } )|
-                    (rk s >= 0 => amortized1 s t' ) &&
-                    (rk s ==(-1) => amortized s t' ) } @-}
+                     (rkDiff (tval t') s 0 => amortized3 s t') &&
+                     (rkDiff (tval t') s 1 => amortized1 s t') &&
+                    (empty s => amortized s t' ) } @-}
 insert :: (Ord a) => a -> Tree a -> Tick (Tree a)
 insert x Nil = pure (leaf x)
 insert x t@(Tree v n l r) = case compare x v of
@@ -76,14 +77,14 @@ insert x t@(Tree v n l r) = case compare x v of
         r'' = tval r'
         insL 
             | rk (tval l') < rk t = undefined -- inTreeL t l'
-            | isNode1_1 t = assert (rk (tval l') == rk t) ?? undefined -- wmapPromoteL t l'
+            | isNode1_1 t = wmapPromoteL t l'
             | isNode1_2 t && isNode1_2 l'' = undefined -- fmapRotateRight t l'
             | isNode1_2 t && isNode2_1 l'' = undefined -- rotateDoubleRight t l'
         insR 
             | rk r'' < rk t = undefined -- Tree x n l r'
-            | isNode1_1 t = undefined -- promoteR t r'
-            | isNode2_1 t && isNode2_1 r'' = undefined -- rotateLeft t r'
-            | isNode2_1 t && isNode1_2 r'' = undefined -- rotateDoubleLeft t r'
+            | isNode1_1 t = wmapPromoteR t r'
+            | isNode2_1 t && isNode2_1 r'' = undefined -- fmapRotateLeft t r'
+            | isNode2_1 t && isNode1_2 r'' = undefined -- fmapRotateDoubleLeft t r'
 
 
 {- 
@@ -244,7 +245,7 @@ rotateDoubleLeft :: Tree a -> Tree a -> Tree a
 rotateDoubleLeft (Tree x n a _) r@(Tree y m (Tree z o b_1 b_2) c) = Tree z (o+1) (Tree x (n-1) a b_1) (Tree y (m-1) b_2 c) 
 
 {-@ wmapPromoteL :: {t:NEWavl | isNode1_1 t} 
-                    -> {l:Tick ({l':NEWavl | rk t == rk l'}) | 
+                    -> {l:Tick (NEWavl) | rk (tval l) == rk t && 
                         (rk (left t) >= 0 => amortized1 (left t) l ) &&
                         (rk (left t) ==(-1) => amortized  (left t) l ) }
                     -> {v:Tick ({v':NEWavl | rkDiff v' t 1 && isNode1_2 v' })| amortized1 t v } @-}
@@ -252,37 +253,37 @@ wmapPromoteL :: Tree a -> Tick(Tree a) -> Tick (Tree a)
 wmapPromoteL t@(Tree a n _ r) l = Tick (tcost l + 1) (Tree a (n+1) (tval l) r)
 
 {-@ wmapPromoteR :: {t:NEWavl | isNode1_1 t} 
-                    -> {r:Tick ({r':NEWavl | rk t == rk r'}) | 
+                    -> {r:Tick (NEWavl) | rk t == rk (tval r) &&
                         (rk (right t) >= 0 => amortized1 (right t) r ) &&
                         (rk (right t) ==(-1) => amortized  (right t) r ) }
                     -> {v:Tick ({v':NEWavl | rkDiff v' t 1 && isNode2_1 v' })| amortized1 t v } @-}
 wmapPromoteR :: Tree a -> Tick(Tree a) -> Tick (Tree a)
 wmapPromoteR t@(Tree a n l _) r = Tick (tcost r + 1) (Tree a (n+1) l (tval r))
 
-{-@ fmapRotateRight :: {t:NEWavl | isNode1_2 t} -> {l:Tick ({l':NEWavl | isNode1_2 l' && rk t == rk l'}) | amortized1 (left t) l}
+{-@ fmapRotateRight :: {t:NEWavl | isNode1_2 t} -> {l:Tick ({l':NEWavl | isNode1_2 l' }) | rk (tval l) == rk t && amortized1 (left t) l}
                     -> {v:Tick ({v':NEWavl | rkDiff t v' 0 }) | amortized3 t v} @-}
 fmapRotateRight :: Tree a -> Tick (Tree a) -> Tick (Tree a)
 fmapRotateRight t@(Tree x n _ c) (Tick tl (Tree y m a b)) = Tick tl (Tree y m a (Tree x (n-1) b c))
 
-{-@ fmapRotateDoubleRight :: {t:NEWavl | isNode1_2 t} -> {l:Tick ({l':NEWavl | isNode2_1 l' && rk t == rk l'}) | amortized1 (left t) l} 
+{-@ fmapRotateDoubleRight :: {t:NEWavl | isNode1_2 t} -> {l:Tick ({l':NEWavl | isNode2_1 l'}) | rk (tval l) == rk t && amortized1 (left t) l} 
                     -> {v:Tick ({v:NEWavl | rkDiff t v 0 }) | amortized3 t v} @-}
 fmapRotateDoubleRight :: Tree a -> Tick (Tree a) -> Tick (Tree a)
 fmapRotateDoubleRight (Tree z n _ d) (Tick tl (Tree x m a (Tree y o b c))) =  Tick tl (Tree y (o+1) (Tree x (m-1) a b) (Tree z (n-1) c d))
 
-{-@ fmapRotateLeft :: {t:NEWavl | isNode2_1 t} -> {r:Tick ({r':NEWavl | isNode2_1 r' && rk r' == rk t}) | amortized1 (right t) r} 
+{-@ fmapRotateLeft :: {t:NEWavl | isNode2_1 t} -> {r:Tick ({r':NEWavl | isNode2_1 r'}) | rk (tval r) == rk t && amortized1 (right t) r} 
                     -> {v:Tick ({v':NEWavl | rkDiff t v' 0 }) | amortized3 t v} @-}
 fmapRotateLeft :: Tree a -> Tick (Tree a) -> Tick (Tree a)
 fmapRotateLeft t@(Tree x n a _) (Tick tl (Tree y m b c)) = Tick tl (Tree y m (Tree x (n-1) a b) c)
 
-{-@ fmapRotateDoubleLeft :: {t:NEWavl | isNode2_1 t} -> {r:Tick ({r':NEWavl | isNode1_2 r' && rk r' == rk t}) | amortized1 (right t) r} 
+{-@ fmapRotateDoubleLeft :: {t:NEWavl | isNode2_1 t} -> {r:Tick ({r':NEWavl | isNode1_2 r'}) | rk (tval r) == rk t && amortized1 (right t) r} 
                     -> {v:Tick ({v':NEWavl | rkDiff t v' 0 }) | amortized3 t v} @-}
 fmapRotateDoubleLeft :: Tree a -> Tick (Tree a) -> Tick (Tree a)
 fmapRotateDoubleLeft (Tree x n a _) (Tick (tl) (Tree y m (Tree z o b_1 b_2) c)) = Tick tl (Tree z (o+1) (Tree x (n-1) a b_1) (Tree y (m-1) b_2 c)) 
 
-{-@ inTreeL :: t:NEWavl -> {l:Tick ({l':NEWavl | rk l' < rk t && (rkDiff l' (left t) 0 || rkDiff l' (left t) 1)}) |
+{-@ inTreeL :: t:NEWavl -> {l:Tick ({l':NEWavl | (rkDiff l' (left t) 0 || rkDiff l' (left t) 1)}) | rk (tval l) < rk t &&
                      (rkDiff (tval l) (left t) 0 => amortized3 (left t) l) &&
                      (rkDiff (tval l) (left t) 1 => amortized1 (left t) l) } 
-                    -> {v:Tick ({v':NEWavl | rkDiff t v' 0}) | amortized3 t v } @-} -- amortized3 t v
+                    -> {v:Tick ({v':NEWavl | rkDiff t v' 0}) | amortized3 t v } @-}
 inTreeL :: Tree a -> Tick (Tree a) -> Tick (Tree a)
 inTreeL t@(Tree x n _ r) l = Tick (tcost l) (Tree x n (tval l) r)
 
