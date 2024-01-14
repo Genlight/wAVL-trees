@@ -60,7 +60,7 @@ rkDiff :: Tree a -> Tree a -> Int -> Bool
 rkDiff t s n = rk t - rk s  == n
 
 {-@ insert :: (Ord a) => a -> s:Wavl -> {t':Tick ({t:NEWavl | ((rkDiff t s 1) || (rkDiff t s 0)) 
-                    && ((rkDiff t s 1 && rk s >= 0) => (isNode1_2 t || isNode2_1 t)) } )|
+                    && ((rkDiff t s 1 && rk s >= 0) => (isNode1_2 t || isNode2_1 t)) } ) |
                     (rkDiff (tval t') s 0 => amortized3 s t') &&
                     (rkDiff (tval t') s 1 => amortized1 s t') &&
                     (empty s => amortized s t' ) } @-}
@@ -81,11 +81,10 @@ insert x t@(Tree v n l r) = case compare x v of
             | isNode1_2 t && isNode1_2 l'' = fmapRotateRight t l'
             | isNode1_2 t && isNode2_1 l'' = fmapRotateDoubleRight t l'
         insR 
-            | rk r'' < rk t = inTreeR t r'
+            | rk r'' < rk t = undefined -- inTreeR t r'
             | isNode1_1 t = wmapPromoteR t r'
             | isNode2_1 t && isNode2_1 r'' = fmapRotateLeft t r'
             | isNode2_1 t && isNode1_2 r'' = fmapRotateDoubleLeft t r'
-
 
 {- 
 {-@ delete :: (Ord a) => a -> s:Wavl -> {t:Wavl | ((rkDiff s t 0) || (rkDiff s t 1))} @-}
@@ -280,14 +279,14 @@ fmapRotateLeft t@(Tree x n a _) (Tick tl (Tree y m b c)) = Tick tl (Tree y m (Tr
 fmapRotateDoubleLeft :: Tree a -> Tick (Tree a) -> Tick (Tree a)
 fmapRotateDoubleLeft (Tree x n a _) (Tick (tl) (Tree y m (Tree z o b_1 b_2) c)) = Tick tl (Tree z (o+1) (Tree x (n-1) a b_1) (Tree y (m-1) b_2 c)) 
 
-{-@ inTreeL :: t:NEWavl -> {l:Tick ({l':NEWavl | (rkDiff l' (left t) 0 || rkDiff l' (left t) 1)}) | rk (tval l) < rk t &&
+{-@ inTreeL :: t:NEWavl -> {l:Tick (NEWavl) | ((rkDiff (tval l) (left t) 0 || rkDiff (tval l) (left t) 1)) && rk (tval l) < rk t &&
                      (rkDiff (tval l) (left t) 0 => amortized3 (left t) l) &&
                      (rkDiff (tval l) (left t) 1 => amortized1 (left t) l) } 
                     -> {v:Tick ({v':NEWavl | rkDiff t v' 0}) | rkDiff t (tval v) 0 && amortized3 t v } @-}
 inTreeL :: Tree a -> Tick (Tree a) -> Tick (Tree a)
 inTreeL t@(Tree x n _ r) l = Tick (tcost l) (Tree x n (tval l) r)
 
-{-@ inTreeR :: t:NEWavl -> {r:Tick ({r':NEWavl | (rkDiff r' (right t) 0 || rkDiff r' (right t) 1)}) | rk (tval r) < rk t &&
+{-@ inTreeR :: t:NEWavl -> {r:Tick (NEWavl) | rk (tval r) < rk t && ((rkDiff (tval r) (right t) 0 || rkDiff (tval r) (right t) 1)) &&
                      (rkDiff (tval r) (right t) 0 => amortized3 (right t) r) &&
                      (rkDiff (tval r) (right t) 1 => amortized1 (right t) r) } 
                     -> {v:Tick ({v':NEWavl | rkDiff t v' 0}) | rkDiff t (tval v) 0 && amortized3 t v } @-}
