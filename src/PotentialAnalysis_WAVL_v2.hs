@@ -6,7 +6,7 @@
 
 module PotentialAnalysis_WAVL_v2 where
 
-import Prelude hiding (pure, wmap, fmap)
+import Prelude hiding (pure, sum)
 import Language.Haskell.Liquid.ProofCombinators 
 import Language.Haskell.Liquid.RTick as RTick
 
@@ -310,3 +310,119 @@ x ?? y = y
 {-@ assert :: {v:Bool | v == True } -> Bool @-}
 assert :: Bool -> Bool
 assert _ = True
+
+{- proof of the connection fo height and rank of WAVL trees -}
+
+{-| Theorem 3.1
+  what we want to proof:
+  - Height of a given Tree t is a logarithmic upper bound
+|-}
+
+{-@ measure ht @-}
+{-@ ht :: Tree a -> Nat @-}
+ht              :: Tree a -> Int
+ht Nil          = 0
+ht (Tree x n l r) = if (ht l) > (ht r) then (1 + ht l) else (1 + ht r)
+
+{-@ measure sum @-}
+{-@ sum :: Tree a -> Nat @-}
+sum :: Tree a -> Int
+sum Nil = 0
+sum (Tree _ _ l r) = 1 + sum l + sum r
+
+{-@ reflect heightLemma @-}
+{-@ heightLemma :: t:Wavl  -> Bool  / [rk t] @-}
+heightLemma :: Tree a -> Bool
+-- heightLemma Nil = True
+heightLemma t = rk t + 1 <= 2 * (ht t) && ht t <= rk t + 1  
+
+{-@ nilLemma :: { t:Wavl | rk t == (-1)} -> {heightLemma t } @-}
+nilLemma :: Tree a -> Proof 
+nilLemma t@Nil = trivial
+
+{-@ hL0 :: {t:NEWavl | ht (left t) == ht (right t)} -> { ht (left t) + 1 == ht t  } @-}
+hL0 :: Tree a -> Proof
+hL0 t@(Tree _ _ l r) =  ht l =<= ht l + 1 === ht t *** QED
+
+{-@ hL1 :: {t:NEWavl | ht (left t) > ht (right t)} -> {ht t == ht (left t) + 1} @-}
+hL1 :: Tree a -> Proof
+hL1 t@(Tree _ _ l r) = ht l =<= (ht l) + 1 === ht t *** QED
+
+{-@ hL2 :: {t:NEWavl | ht (left t) < ht (right t)} -> {ht t == ht (right t) + 1} @-}
+hL2 :: Tree a -> Proof
+hL2 t@(Tree _ _ l r) = ht r =<= ht r + 1 === ht t *** QED
+
+{-@ lowerHeightProof :: t:Wavl -> { ht t <= rk t + 1} / [rk t] @-}
+lowerHeightProof :: Tree a -> ()
+lowerHeightProof t@Nil = trivial ? nilLemma *** QED
+lowerHeightProof t@(Tree _ 0 l@Nil r@Nil) = rk r + 1 
+                                        === 1 + (-1) ? isWavlNode t
+                                        === ht r ? nilLemma r 
+                                        === rk l + 1 ? nilLemma l         
+                                        === ht l
+                                        =<= ht t  ? hL0 t
+                                        === 1 
+                                        =<= rk t + 1
+                                        *** QED
+lowerHeightProof t@(Tree _ n l r)
+  | ht l > ht r   = rk t + 1  
+                =>= rk l + 1  ? lowerHeightProof l
+                =>= ht l  
+                =<= ht l + 1 ? hL1 t
+                === ht t 
+                *** QED
+  | ht r > ht l   = rk t + 1
+                =>= rk r + 1  ? lowerHeightProof r
+                =>= ht r  
+                =<= ht r + 1 ? hL2 t
+                === ht t 
+                *** QED
+  | ht l == ht r  = rk t + 1
+                =>= rk l + 1  ? lowerHeightProof l
+                =>= ht l  
+                =<= ht l + 1 ? hL0 t
+                === ht t 
+                *** QED
+
+{-@ upperHeightProof :: t:Wavl -> { rk t + 1 <= ht t * 2 } / [rk t] @-}
+upperHeightProof :: Tree a -> Proof
+upperHeightProof t@Nil  = trivial
+upperHeightProof t@(Tree _ 0 l r) = rk r
+                                === (-1)
+                                =<= 0     ? nilLemma r
+                                === ht r  
+                                === rk l + 1 ? nilLemma l         
+                                === ht l
+                                =<= ht t  ? hL0 t        
+                                === 1
+                                === rk t + 1
+                                =<= ht t * 2 
+                                *** QED
+upperHeightProof t@(Tree _ n l r) 
+  | ht l == ht r  = rk t           
+                =<= rk l + 2       ? upperHeightProof l
+                =<= 2 * ht l + 2   
+                === 2 * (ht l + 1) ? hL0 t
+                =<= 2 * ht t
+                *** QED
+  | ht l > ht r   = rk t           
+                =<= rk l + 2       ? upperHeightProof l
+                =<= 2 * ht l + 2  
+                === 2 * (ht l + 1) ? hL1 t
+                =<= 2 * ht t
+                *** QED
+  | ht r > ht l   = rk t            
+                =<= rk r + 2        ? upperHeightProof r
+                =<= 2 * (ht r) + 2  
+                === 2 * (ht r + 1) ? hL2 t      
+                =<= 2 * ht t
+                *** QED
+
+{-@ heightProof :: t:Wavl -> {heightLemma t} @-}
+heightProof :: Tree a -> Proof
+heightProof t@Nil = ht t === rk t + 1 ? nilLemma
+                    =<= 2 * ht t *** QED 
+heightProof t = ht t ? lowerHeightProof t 
+            =<= rk t + 1 ? upperHeightProof t
+            =<= 2 * ht t  
+            *** QED
