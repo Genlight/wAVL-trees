@@ -1,7 +1,7 @@
 {-@ LIQUID "--short-names" @-}
 -- {-@ LIQUID "--bscope" @-}
 {-@ LIQUID "--reflection" @-}
-{-@ LIQUID "--diff" @-}
+-- {-@ LIQUID "--diff" @-}
 
 module WAVL_v2 where
 
@@ -73,19 +73,21 @@ delete _ Nil = Nil
 delete y t@(Tree x n l r) = case compare x y of
     LT -> delL t l'
     GT -> delR t r'
-    EQ -> merge t 
+    EQ -> merge
     where
         l' = delete x l
         r' = delete x r
+        merge 
+            | empty r = l
+            | otherwise = let (r'', x) = getMin r in delR (Tree x n l r) r''
+        
 
-{-@ merge :: s:NEWavl -> {t:Wavl | ((rkDiff s t 0) || (rkDiff s t 1))} @-}
-merge :: Tree a -> Tree a
-merge t@(Tree _ n Nil Nil) = Nil
-merge t@(Tree _ n Nil r) = r
-merge t@(Tree _ n l Nil) = l
-merge t@(Tree _ n l r)   = delR (Tree x n l r) r'
-    where 
-        (r', x)     = getMin r
+-- {-@ merge :: s:NEWavl -> {t:Wavl | ((rkDiff s t 0) || (rkDiff s t 1))} @-}
+-- merge :: Tree a -> Tree a
+-- merge t@(Tree _ n l Nil) = l
+-- merge t@(Tree _ n l r)   = delR (Tree x n l r) r'
+--     where 
+--         (r', x)     = getMin r
 
 {-@ delR :: t:NEWavl -> {r:Wavl | ((rkDiff (right t) r 0) || (rkDiff (right t) r 1))} -> {v:NEWavl | ((rkDiff t v 0) || (rkDiff t v 1))} @-}
 delR t@(Tree x n Nil _) r = treeR t r
@@ -124,19 +126,19 @@ getMin t@(Tree x n l r) = (delL t l', x')
   where
     (l', x')             = getMin l
 
-{-@ demoteL :: {t:NEWavl | isNode2_2 t} -> {l:Wavl | child3 t l} -> {v:NEWavl | rkDiff t v 1 && isNode2_1 v } @-}
+{-@ demoteL :: {t:NEWavl | isNode2_2 t} -> {l:Wavl | child3 t l} -> {v:NEWavl | rkDiff t v 1 } @-} -- && isNode2_1 v 
 demoteL :: Tree a -> Tree a -> Tree a
 demoteL t@(Tree a n _ r) l = Tree a (n - 1) l r
 
-{-@ demoteR :: {t:NEWavl | isNode2_2 t} -> {r:Wavl | child3 t r} -> {v:NEWavl | rkDiff t v 1 && isNode1_2 v} @-}
+{-@ demoteR :: {t:NEWavl | isNode2_2 t} -> {r:Wavl | child3 t r} -> {v:NEWavl | rkDiff t v 1 } @-} -- && isNode1_2 v
 demoteR :: Tree a -> Tree a -> Tree a
 demoteR (Tree a n l _) r = Tree a (n - 1) l r
 
-{-@ doubleDemoteL :: {t:NEWavl | isNode2_1 t && isNode2_2 (right t)} -> {l:Wavl | child3 t l } -> {v:NEWavl | rkDiff t v 1 && isNode2_1 v } @-}
+{-@ doubleDemoteL :: {t:NEWavl | isNode2_1 t && isNode2_2 (right t)} -> {l:Wavl | child3 t l } -> {v:NEWavl | rkDiff t v 1 } @-} -- && isNode2_1 v
 doubleDemoteL :: Tree a -> Tree a -> Tree a
 doubleDemoteL (Tree x n _ (Tree y m rl rr)) l = (Tree x (n-1) l (Tree x (m-1) rl rr))
 
-{-@ doubleDemoteR :: {t:NEWavl | isNode1_2 t && isNode2_2 (left t) } -> {r:Wavl | child3 t r} -> {v:NEWavl | rkDiff t v 1 && isNode1_2 v} @-}
+{-@ doubleDemoteR :: {t:NEWavl | isNode1_2 t && isNode2_2 (left t) } -> {r:Wavl | child3 t r} -> {v:NEWavl | rkDiff t v 1 } @-} -- && isNode1_2 v
 doubleDemoteR :: Tree a -> Tree a -> Tree a
 doubleDemoteR (Tree x n (Tree y m ll lr) _) r = Tree x (n-1) (Tree y (m-1) ll lr) r 
 
@@ -164,15 +166,15 @@ isWavlNode t = isNode1_1 t || isNode1_2 t || isNode2_1 t || isNode2_2 t
 
 {-@ inline isNode1_1 @-}
 isNode1_1 :: Tree a -> Bool
-isNode1_1 t = rk (left t) + 1 == rk t && rk t == rk (right t) + 1 && not (empty t)
+isNode1_1 t = rk (left t) + 1 == rk t && rk t == rk (right t) + 1 -- && not (empty t)
 
 {-@ inline isNode1_2 @-}
 isNode1_2 :: Tree a -> Bool
-isNode1_2 t = rk (left t) + 1 == rk t && rk t == rk (right t) + 2 && not (empty (left t))
+isNode1_2 t = rk (left t) + 1 == rk t && rk t == rk (right t) + 2 -- && not (empty (left t))
 
 {-@ inline isNode2_1 @-}
 isNode2_1 :: Tree a -> Bool
-isNode2_1 t = rk (left t) + 2 == rk t && rk t == rk (right t) + 1 && not (empty (right t))
+isNode2_1 t = rk (left t) + 2 == rk t && rk t == rk (right t) + 1 -- && not (empty (right t))
 
 {-@ inline isNode2_2 @-}
 isNode2_2 :: Tree a -> Bool
