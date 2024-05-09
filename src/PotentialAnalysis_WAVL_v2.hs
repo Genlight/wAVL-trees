@@ -426,3 +426,62 @@ heightProof t = ht t ? lowerHeightProof t
             =<= rk t + 1 ? upperHeightProof t
             =<= 2 * ht t  
             *** QED
+
+-- taken code from Jamie HOCHRAINER
+{-@ type Pos = {n:Int | n >= 1} @-}
+
+{-@ reflect log2 @-}
+{-@ log2 :: n:Pos -> v:Nat / [n]@-}
+log2 :: Int -> Int
+log2 1 = 0
+log2 n = 1 + log2 (div n 2)
+
+{-@ reflect powerOfTwo @-}
+{-@ powerOfTwo :: Nat -> Pos @-}
+powerOfTwo :: Int -> Int
+powerOfTwo 0 = 1
+powerOfTwo n = 2 * (powerOfTwo (n - 1))
+
+{-@ reflect logPowP @-}
+{-@ logPowP :: n:Nat -> {log2 (powerOfTwo n) == n} @-}
+logPowP :: Int -> Proof
+logPowP 0 = ()
+logPowP n = logPowP (n-1) ?? ()
+
+{-@ reflect logAddProp @-}
+{-@ logAddProp :: x:Pos -> {log2 (2 * powerOfTwo x) = 1 + x} @-}
+logAddProp :: Int -> Proof
+logAddProp 1 = ()
+logAddProp x = logPowP x ?? ()
+
+{-@ reflect logMon @-}
+{-@ logMon :: x:Pos -> {y:Pos | x <= y} -> {log2 x <= log2 y} @-}
+logMon :: Int -> Int -> Proof
+logMon x 1 = ()
+logMon 1 y = (0 <= log2 y) ?? ()
+logMon x y =
+    logMon (div x 2) (div y 2) ??
+    ()
+
+{-@ lemmaSum2PowerOf2 :: t:Wavl -> () @-}
+lemmaSum2PowerOf2 :: Tree a -> Proof
+lemmaSum2PowerOf2 t = ()
+
+{-@ lem_01 :: t:Tree a -> {sum t >= powerOfTwo (div (rk t) 2) } @-}
+lem_01 :: Tree a -> Proof
+lem_01 t = undefined
+
+-- (powerOfTwo ( div ((rk t) 2))) <= sum t 
+
+-- -- Beweis der log Höhe: 
+-- {-@ lemmaheight2Log :: t:Wavl -> { rk t <= 2 * log2 (sum t) } @-}
+-- lemmaheight2Log :: Tree a -> Proof
+-- lemmaheight2Log t@Nil =  trivial 
+-- lemmaheight2Log t@(Tree _ 0 Nil Nil) = trivial 
+-- lemmaheight2Log t@(Tree _ n l r) 
+--     | rk l == rk r = sum t === sum l + sum r  
+--                  =>= powerOfTwo ()
+
+--     | rk l < rk r = undefined
+--     | rk l > rk r = undefined
+
