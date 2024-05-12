@@ -1,17 +1,22 @@
-resolver: lts-19.33
-packages:
-  - .
+resolver: lts-21.13
+
 extra-deps:
   - git: https://github.com/ucsd-progsys/liquidhaskell
-    commit: 815085bd4d50309f6089306fb4b5484b3fde6847
+    commit: b3a5ac99a534a539e9758fd008f14d66b241682c
     subdirs:
       - .
-      - liquid-base
+      - liquidhaskell-boot
       - liquid-prelude
-      - liquid-ghc-prim
-      - liquid-containers
+      - liquid-vector
   - git: https://github.com/ucsd-progsys/liquid-fixpoint
-    commit: a45f8fe9f6ac2533228f9149926bf884a3525945
-  - rest-rewrite-0.4.0@sha256:be93d899f7dece33f2a7613eb3dabd24d139f9cb2fc09f9efedfdce4ba6eb276,3923
+    commit: b6c3e11ce19629cced047eb2df748ec336148451
+  - hashable-1.4.4.0
+  - rest-rewrite-0.4.1
+  - smtlib-backends-0.3
+  - smtlib-backends-process-0.3
+  - os-string-2.0.2.1@sha256:0bf4ff8f387d7fd05a43c18fa677dd02259c99d63c2d02c5823f152736513bef,3261
+allow-newer: true
+allow-newer-deps: 
+  - hashable
 nix:
   packages: [cacert, git, hostname, z3]

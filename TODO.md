@@ -15,7 +15,7 @@ Nicki amortisierte Comp. Analyse heraussuchen!!
 * * starke statische Invarianten haben, die forciert werden, die eine Herausforderung für die Verifzierung sind
 Diese müssen in der Verifizierung immer wieder auf Richt. kontrolliert werden 
 * State of the art / related Work
-    siehe ATLAs / Isa/HOL
+    siehe ATLAS / Isa/HOL
 * Methodological approach
 * Contributions
 

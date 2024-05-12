@@ -9,5 +9,5 @@
         ":set -fno-hide-source-paths",
         ":set -Wno-error=missing-home-modules"
     ],
-    "ghcSimple.feature.rangeType": false
+    "haskell.manageHLS": "GHCup"
 }

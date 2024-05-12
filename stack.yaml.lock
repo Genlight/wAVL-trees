@@ -5,91 +5,106 @@
 
 packages:
 - completed:
-    commit: 815085bd4d50309f6089306fb4b5484b3fde6847
+    commit: b3a5ac99a534a539e9758fd008f14d66b241682c
     git: https://github.com/ucsd-progsys/liquidhaskell
     name: liquidhaskell
     pantry-tree:
-      sha256: e7144b716e3db144846c3a189b082f49f0ccd881b7227be62913bc48d0d1fc98
-      size: 321445
+      sha256: 7b9617a1ac377ac95818c14553bb4dcb0cb394d14d3fdbf9e563e8508fde9e97
+      size: 292940
     subdir: .
-    version: 0.9.0.2.1
+    version: 0.9.4.7.0
   original:
-    commit: 815085bd4d50309f6089306fb4b5484b3fde6847
+    commit: b3a5ac99a534a539e9758fd008f14d66b241682c
     git: https://github.com/ucsd-progsys/liquidhaskell
     subdir: .
 - completed:
-    commit: 815085bd4d50309f6089306fb4b5484b3fde6847
+    commit: b3a5ac99a534a539e9758fd008f14d66b241682c
     git: https://github.com/ucsd-progsys/liquidhaskell
-    name: liquid-base
+    name: liquidhaskell-boot
     pantry-tree:
-      sha256: bc16a74d46b76935cfeafdf0d6bf423382c0fda5aa905ad98c60c45ab74e31f9
-      size: 15114
-    subdir: liquid-base
-    version: 4.14.3.0
+      sha256: 67cfaa753b40e78503d76453919b515b7b2d6e2504600a69f1cf0fb76d3de0c7
+      size: 8533
+    subdir: liquidhaskell-boot
+    version: 0.9.4.7.0
   original:
-    commit: 815085bd4d50309f6089306fb4b5484b3fde6847
+    commit: b3a5ac99a534a539e9758fd008f14d66b241682c
     git: https://github.com/ucsd-progsys/liquidhaskell
-    subdir: liquid-base
+    subdir: liquidhaskell-boot
 - completed:
-    commit: 815085bd4d50309f6089306fb4b5484b3fde6847
+    commit: b3a5ac99a534a539e9758fd008f14d66b241682c
     git: https://github.com/ucsd-progsys/liquidhaskell
     name: liquid-prelude
     pantry-tree:
-      sha256: 5fb206c776b87a0de48c5f429ac82b689a5942d215582a06ac752e1f118229f7
-      size: 1029
+      sha256: 57c18638690a40cd26b0e4a5acfc4c086dac6b84cd542b8afce2aac5a551a08e
+      size: 882
     subdir: liquid-prelude
-    version: 0.8.10.2
+    version: 0.9.2.8
   original:
-    commit: 815085bd4d50309f6089306fb4b5484b3fde6847
+    commit: b3a5ac99a534a539e9758fd008f14d66b241682c
     git: https://github.com/ucsd-progsys/liquidhaskell
     subdir: liquid-prelude
 - completed:
-    commit: 815085bd4d50309f6089306fb4b5484b3fde6847
+    commit: b3a5ac99a534a539e9758fd008f14d66b241682c
     git: https://github.com/ucsd-progsys/liquidhaskell
-    name: liquid-ghc-prim
+    name: liquid-vector
     pantry-tree:
-      sha256: e1dbd416d00871251794b17a96e25453469856a73cb943a3dc3d851a7a8f00a5
-      size: 912
-    subdir: liquid-ghc-prim
-    version: 0.6.1
+      sha256: 5a12e4c4818b9138bf2bbbdb7ebea7f4f581839d635ad95a5ff8a3e4b0d13124
+      size: 231
+    subdir: liquid-vector
+    version: 0.13.1.0
   original:
-    commit: 815085bd4d50309f6089306fb4b5484b3fde6847
+    commit: b3a5ac99a534a539e9758fd008f14d66b241682c
     git: https://github.com/ucsd-progsys/liquidhaskell
-    subdir: liquid-ghc-prim
+    subdir: liquid-vector
 - completed:
-    commit: 815085bd4d50309f6089306fb4b5484b3fde6847
-    git: https://github.com/ucsd-progsys/liquidhaskell
-    name: liquid-containers
-    pantry-tree:
-      sha256: 69ab7d9ccde93b16e14c0f27ac8f2d8bac81e7047c3ccad98e7926c8cadd21b5
-      size: 2143
-    subdir: liquid-containers
-    version: 0.6.2.1
-  original:
-    commit: 815085bd4d50309f6089306fb4b5484b3fde6847
-    git: https://github.com/ucsd-progsys/liquidhaskell
-    subdir: liquid-containers
-- completed:
-    commit: a45f8fe9f6ac2533228f9149926bf884a3525945
+    commit: b6c3e11ce19629cced047eb2df748ec336148451
     git: https://github.com/ucsd-progsys/liquid-fixpoint
     name: liquid-fixpoint
     pantry-tree:
-      sha256: e71b5e8e0abff75e8f20d75dd321d4512cfb5671cfabf2a6575d0d1dd082dbb3
-      size: 22580
-    version: 0.9.0.2.1
+      sha256: 1972eacd98864c90b6bbfe8741dd071d9e88ee561d583b18ac1e4bd1dc4ff211
+      size: 23600
+    version: 0.9.4.7
   original:
-    commit: a45f8fe9f6ac2533228f9149926bf884a3525945
+    commit: b6c3e11ce19629cced047eb2df748ec336148451
     git: https://github.com/ucsd-progsys/liquid-fixpoint
 - completed:
-    hackage: rest-rewrite-0.4.0@sha256:be93d899f7dece33f2a7613eb3dabd24d139f9cb2fc09f9efedfdce4ba6eb276,3923
+    hackage: hashable-1.4.4.0@sha256:ae22238274c572aa91e90c6c353e7206386708912ac5e6dc40ac61d1dcc553db,5216
     pantry-tree:
-      sha256: ad19ccb2185ac0b58ddfd2eede69e6444986e687232e1504eb04ce7bb6e39368
+      sha256: cd91ec6f09475d2d0b2cf49565a488c21694be0d46bf29565f9258f5f41a3a84
+      size: 1249
+  original:
+    hackage: hashable-1.4.4.0
+- completed:
+    hackage: rest-rewrite-0.4.1@sha256:1254960c0a595cf4c9d5a3b986f42644407c63c74578d75b3568a6a12e5143f0,3886
+    pantry-tree:
+      sha256: 17b4e99420cc1929e2b7d29558a0f909d6fcabd263fbc590dbf2585f893f5a6e
       size: 4018
   original:
-    hackage: rest-rewrite-0.4.0@sha256:be93d899f7dece33f2a7613eb3dabd24d139f9cb2fc09f9efedfdce4ba6eb276,3923
+    hackage: rest-rewrite-0.4.1
+- completed:
+    hackage: smtlib-backends-0.3@sha256:a947aead99f6a314833bddca9b502d5faea8d3bd2fc76ffb53c34d5c5b7557bc,1211
+    pantry-tree:
+      sha256: 97b88a647ac996808a93b2eab62e9e8574d9b9a451ee37a9103e209b63be012d
+      size: 275
+  original:
+    hackage: smtlib-backends-0.3
+- completed:
+    hackage: smtlib-backends-process-0.3@sha256:caf131d3d6f6825e3a3182713130a8e14d0bd6530eeda643e8a511b546ff1a26,1676
+    pantry-tree:
+      sha256: 7147fef29b4270275168a285fc0c68784329d1276ab9e44e9a45f8d79b526220
+      size: 461
+  original:
+    hackage: smtlib-backends-process-0.3
+- completed:
+    hackage: os-string-2.0.2.1@sha256:0bf4ff8f387d7fd05a43c18fa677dd02259c99d63c2d02c5823f152736513bef,3261
+    pantry-tree:
+      sha256: caa0b78b83a9d429324784e239c9bf33017f9f4a3c34ec8392b3d8a1e8968bd6
+      size: 2217
+  original:
+    hackage: os-string-2.0.2.1@sha256:0bf4ff8f387d7fd05a43c18fa677dd02259c99d63c2d02c5823f152736513bef,3261
 snapshots:
 - completed:
-    sha256: 6d1532d40621957a25bad5195bfca7938e8a06d923c91bc52aa0f3c41181f2d4
-    size: 619204
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/19/33.yaml
-  original: lts-19.33
+    sha256: 8017c7970c2a8a9510c60cc70ac245d59e0c34eb932b91d37af09fe59855d854
+    size: 640038
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/21/13.yaml
+  original: lts-21.13
