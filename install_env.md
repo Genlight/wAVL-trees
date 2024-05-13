@@ -19,15 +19,19 @@ x64
 # Install Stack
 follow the guide: [https://docs.haskellstack.org/en/stable/install_and_upgrade/](https://docs.haskellstack.org/en/v1.0.2/install_and_upgrade/)
 
+```bash
+curl -sSL https://get.haskellstack.org/ | sh -s - -f
+```
+
 add repositories: 
 ```
 $ sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 575159689BEFB442
 $ echo 'deb http://download.fpcomplete.com/ubuntu focal main'|sudo tee /etc/apt/sources.list.d/fpco.list
 ```
 
-and install stack: 
+and install z3
 ```
-$ sudo apt install haskell-stack
+$ sudo apt install z3
 ```
 
 Then, when installed, you can download the repo from Github
@@ -74,3 +78,10 @@ How to install extensions is explained [here](https://code.visualstudio.com/docs
 In one of my debugging session I tested the hypothesis that LH needs to be updated to the newest (experimental) version at that time. That was v0.9.0.2. 
 
 To load this GHC plugin into my stack environment I only changed the repo commit ID's of LH and liquid-fixpoint to the respective newer versions and also changed the lts-resolver to the newer GHC version. In all, the changes that mattered were in stack.yaml, s. commit [628b453](https://github.com/Genlight/lhTest/commit/628b453883cad5e58168569d19c304040a512b2d).
+
+# UPDATED: environment to GHC 9.4.7
+
+* changed GHC version to 9.4.7
+* updated `lhTest.cabal` and `stack.yaml` files to support this. 
+* Updated commit hashes for `liquid-fixpoint` and `liquidhaskell`
+* bumped hashtable to work with the other dependencies
