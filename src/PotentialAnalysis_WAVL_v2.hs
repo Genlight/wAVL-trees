@@ -102,7 +102,7 @@ delete y t@(Tree x n l r) = case compare x y of
 
 {-@  getMin :: t:NEWavl -> ({v:Tick {v':Wavl | (rkDiff t v' 0) || (rkDiff t v' 1) } | amortDelStmt t v}, a) @-} 
 getMin :: Tree a -> (Tick (Tree a), a)
-getMin (Tree x _ Nil r) = ((pure r), x)
+getMin (Tree x _ Nil r) = (pure r, x)
 getMin t@(Tree x n l r) = (delL t l', x')
   where
     (l', x')             = getMin l
@@ -324,16 +324,23 @@ ht              :: Tree a -> Int
 ht Nil          = 0
 ht (Tree x n l r) = if (ht l) > (ht r) then (1 + ht l) else (1 + ht r)
 
+-- {-@ sum :: t:Tree a -> {v:Nat | rk t <= 2 * log2 v } / [rk t] @-}
+-- count all nodes which have at least one NIL child
+-- this will count 1,1-rank node and 1,2-node both of rank 1 the same
+-- this will account for uneven trees, which leave out each second leaf and only create 1,2-nodes at the second lowest rank level in the tree
+-- this secures 
 {-@ measure sum @-}
-{-@ sum :: Tree a -> Nat @-}
+{-@ sum :: t:Tree a -> Nat @-}
 sum :: Tree a -> Int
 sum Nil = 0
-sum (Tree _ _ l r) = 1 + sum l + sum r
+sum (Tree _ 0 Nil Nil) = 1
+sum (Tree _ 1 l r@Nil) = 1 + sum l
+sum (Tree _ 1 l@Nil r) = 1 + sum r
+sum (Tree _ _ l r) = sum l + sum r
 
 {-@ reflect heightLemma @-}
 {-@ heightLemma :: t:Wavl  -> Bool  / [rk t] @-}
-heightLemma :: Tree a -> Bool
--- heightLemma Nil = True
+heightLemma :: Tree a -> Bool-- heightLemma Nil = True
 heightLemma t = rk t + 1 <= 2 * (ht t) && ht t <= rk t + 1  
 
 {-@ nilLemma :: { t:Wavl | rk t == (-1)} -> {heightLemma t } @-}
@@ -469,19 +476,54 @@ lemmaSum2PowerOf2 t = ()
 
 {-@ lem_01 :: t:Tree a -> {sum t >= powerOfTwo (div (rk t) 2) } @-}
 lem_01 :: Tree a -> Proof
+lem_01 Nil = undefined
 lem_01 t = undefined
 
--- (powerOfTwo ( div ((rk t) 2))) <= sum t 
+-- minimal tree 
+{-@ type Wavl2_2 = {v:Tree a | structLemma2_2 v } @-}
 
--- -- Beweis der log Höhe: 
+{-@ measure structLemma2_2 @-}
+structLemma2_2 :: Tree a -> Bool
+structLemma2_2 Nil = True
+structLemma2_2 t@(Tree _ n l r) = (isNode2_2 t || (isNode1_2 t && empty r) || (isNode2_1 t && empty l) || (isNode1_1 t && empty l && empty r)) && structLemma2_2 l && structLemma2_2 r 
+
+-- {-@ sum2_2 :: t:Wavl2_2 -> {v:Nat | v >= powerOfTwo (div (rk t) 2)} @-}
+-- sum2_2 :: Tree a -> Int
+-- sum2_2 t = sum t
+
+{-@ lemmaSum2Mintree :: t:Wavl2_2 -> {powerOfTwo (div (rk t) 2) <= sum t } @-}
+lemmaSum2Mintree :: Tree a -> Proof
+lemmaSum2Mintree t@Nil = trivial
+lemmaSum2Mintree t@(Tree _ 0 Nil Nil) = trivial
+lemmaSum2Mintree t@(Tree _ 1 _ Nil) = trivial
+lemmaSum2Mintree t@(Tree _ 1 Nil _) = trivial
+lemmaSum2Mintree t@(Tree _ n l r) = sum t === sum l + sum r 
+                                    === 2 * sum r 
+                                    === 2 * sum l ? lemmaSum2Mintree l
+                                    =>= 2 * powerOfTwo (div (rk l) 2) 
+                                    === powerOfTwo ((div (rk l) 2 ) + 1) 
+                                    === powerOfTwo ((div (rk l + 2) 2)) 
+                                    === powerOfTwo ((div (rk t) 2)) 
+                                    *** QED
+
+
+{-| Beweis für die Verbindung von den minimalen Bäumen zu normalen Bäumen |-}
+-- {-@ lemmaMinTree2DefTree :: t:Wavl2_2 -> {t1:Wavl | rk t == rk t1 } -> {sum t <= sum t1 } @-}
+-- lemmaMinTree2DefTree :: t:Tree a -> t1:Tree a -> ()
+-- lemmaMinTree2DefTree t@Nil t1@Nil = ()
+-- lemmaMinTree2DefTree t@(Tree _ 0 _ _) t1@(Tree _ 0 _ _) = ()
+-- lemmaMinTree2DefTree t@(Tree _ 1 l r) t1@(Tree _ 1 l1 r1) = () -- => 9 cases!! => sub-beweis!
+-- lemmaMinTree2DefTree t@(Tree _ n l r) t1@(Tree _ m l1 r1)
+    -- | isNode1_1 t1 = trivial 
+    -- | isNode1_2 t1 = trivial 
+    -- | isNode2_1 t1 = trivial 
+
+-- -- Beweis der logarithmischen Höhe: 
 -- {-@ lemmaheight2Log :: t:Wavl -> { rk t <= 2 * log2 (sum t) } @-}
 -- lemmaheight2Log :: Tree a -> Proof
--- lemmaheight2Log t@Nil =  trivial 
--- lemmaheight2Log t@(Tree _ 0 Nil Nil) = trivial 
--- lemmaheight2Log t@(Tree _ n l r) 
---     | rk l == rk r = sum t === sum l + sum r  
---                  =>= powerOfTwo ()
-
---     | rk l < rk r = undefined
---     | rk l > rk r = undefined
-
+-- lemmaheight2Log t@Nil = trivial 
+-- lemmaheight2Log t@(Tree _ n _ _) = 2 * log2 (sum t) ? lemmaSum2Mintree t ? lemmaMinTree2DefTree t
+--                                    =>= 2 * log2 (powerOfTwo (div (rk t) 2)) ? logPowP _
+--                                    === 2 * (div (rk t) 2)
+--                                    === rk t
+--                                    *** QED
