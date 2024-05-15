@@ -2,7 +2,7 @@
 -- {-@ LIQUID "--bscope" @-}
 {-@ LIQUID "--reflection" @-}
 {-@ LIQUID "--ple" @-}
--- {-@ LIQUID "--diff" @-}
+{-@ LIQUID "--diff" @-}
 
 module PotentialAnalysis_WAVL_v2 where
 
@@ -456,7 +456,7 @@ logPowP 0 = ()
 logPowP n = logPowP (n-1) ?? ()
 
 {-@ reflect logAddProp @-}
-{-@ logAddProp :: x:Pos -> {log2 (2 * powerOfTwo x) = 1 + x} @-}
+{-@ logAddProp :: x:Pos -> {log2 (2 * powerOfTwo x) == 1 + x} @-}
 logAddProp :: Int -> Proof
 logAddProp 1 = ()
 logAddProp x = logPowP x ?? ()
@@ -470,16 +470,7 @@ logMon x y =
     logMon (div x 2) (div y 2) ??
     ()
 
-{-@ lemmaSum2PowerOf2 :: t:Wavl -> () @-}
-lemmaSum2PowerOf2 :: Tree a -> Proof
-lemmaSum2PowerOf2 t = ()
-
-{-@ lem_01 :: t:Tree a -> {sum t >= powerOfTwo (div (rk t) 2) } @-}
-lem_01 :: Tree a -> Proof
-lem_01 Nil = undefined
-lem_01 t = undefined
-
--- minimal tree 
+-- minimal tree definition
 {-@ type Wavl2_2 = {v:Tree a | structLemma2_2 v } @-}
 
 {-@ measure structLemma2_2 @-}
@@ -487,36 +478,110 @@ structLemma2_2 :: Tree a -> Bool
 structLemma2_2 Nil = True
 structLemma2_2 t@(Tree _ n l r) = (isNode2_2 t || (isNode1_2 t && empty r) || (isNode2_1 t && empty l) || (isNode1_1 t && empty l && empty r)) && structLemma2_2 l && structLemma2_2 r 
 
--- {-@ sum2_2 :: t:Wavl2_2 -> {v:Nat | v >= powerOfTwo (div (rk t) 2)} @-}
--- sum2_2 :: Tree a -> Int
--- sum2_2 t = sum t
-
-{-@ lemmaSum2Mintree :: t:Wavl2_2 -> {powerOfTwo (div (rk t) 2) <= sum t } @-}
+{-@ lemmaSum2Mintree :: {t:Wavl2_2 | not (empty t)} -> {powerOfTwo (div (rk t) 2) <= sum t } @-}
 lemmaSum2Mintree :: Tree a -> Proof
-lemmaSum2Mintree t@Nil = trivial
-lemmaSum2Mintree t@(Tree _ 0 Nil Nil) = trivial
-lemmaSum2Mintree t@(Tree _ 1 _ Nil) = trivial
-lemmaSum2Mintree t@(Tree _ 1 Nil _) = trivial
-lemmaSum2Mintree t@(Tree _ n l r) = sum t === sum l + sum r 
-                                    === 2 * sum r 
-                                    === 2 * sum l ? lemmaSum2Mintree l
-                                    =>= 2 * powerOfTwo (div (rk l) 2) 
-                                    === powerOfTwo ((div (rk l) 2 ) + 1) 
-                                    === powerOfTwo ((div (rk l + 2) 2)) 
-                                    === powerOfTwo ((div (rk t) 2)) 
+lemmaSum2Mintree t@(Tree _ 0 Nil Nil) = sum t 
+                                    === 1 
+                                    === powerOfTwo 0 
+                                    === powerOfTwo (div 0 2)
                                     *** QED
+lemmaSum2Mintree t@(Tree _ 1 l r) = sum t ? subLemma_02 t
+                                  === 2
+                                  === powerOfTwo 1
+                                  =>= powerOfTwo 0
+                                  === powerOfTwo (div 1 2) 
+                                  *** QED
+lemmaSum2Mintree t@(Tree _ n l r) = sum t 
+                                === sum l + sum r ? lemmaSubSum l r
+                                === 2 * sum l ? lemmaSum2Mintree l
+                                =>= 2 * powerOfTwo (div (rk l) 2)
+                                === powerOfTwo ((div (rk l) 2 ) + 1) ? lemma_02 (rk l)
+                                === powerOfTwo ((div (rk l + 2) 2)) ? structLemma2_2 t
+                                === powerOfTwo ((div n 2)) 
+                                *** QED
 
+{-@ lemma_02 :: n:Int -> {(div n 2) + 1 == (div (n + 2) 2)} @-}
+lemma_02 :: Int -> ()
+lemma_02 n = (div n 2) + 1 === (div n 2) + (div 2 2) ? ()
+                           === div (n + 2) 2 *** QED
+
+{-@ lemma_03 :: { t:Wavl2_2 | rk t >= 2 } -> {rk (left t) == rk (right t)} @-}
+lemma_03 :: Tree a -> ()
+lemma_03 t@(Tree _ n l r) = rk t ? structLemma2_2 t ? rk t >= 2
+                        === rk r + 2
+                        === rk l + 2
+                        *** QED
+
+{-@ lemma_04 :: { t:Wavl2_2 | rk t >= 2} -> { v:Wavl2_2 | rk v == rk t} -> {rk (left t) == rk (left v) && rk (right t) == rk (right v)} @-}
+lemma_04 :: Tree a -> Tree a -> ()
+lemma_04 t@(Tree _ n l1 r1) v@(Tree _ m l2 r2) = n
+           === m ? structLemma2_2 v
+           === rk l2 + 2 
+           === rk r2 + 2 
+           === n ? structLemma2_2 t
+           === rk l1 + 2 
+           === rk r1 + 2 
+           *** QED
+
+
+{-@ lemma_05 :: { t:Wavl2_2 | rk t >= 2} -> { v:Wavl2_2 | rk v == rk t} -> {sum t + sum v == 2 * sum t } @-}
+lemma_05 :: Tree a -> Tree a -> ()
+lemma_05 t v =  sum t + sum v ? lemmaSubSum t v 
+            === sum t + sum t 
+            === sum t * 2 
+            *** QED
+
+{-@ subLemma_01 :: {t:Wavl2_2 | rk t == 0}  -> {sum t == 1} @-}
+subLemma_01 :: Tree a -> ()
+subLemma_01 t@(Tree _ 0 Nil Nil) = ()
+
+{-@ subLemma_02 :: {t:Wavl2_2 | rk t == 1}  -> {sum t == 2} @-}
+subLemma_02 :: Tree a -> ()
+subLemma_02 t@(Tree _ 1 l r@Nil)  = sum t 
+                                === 1 + sum l ? subLemma_01 l
+                                -- === 2 
+                                *** QED
+subLemma_02 t@(Tree _ 1 l@Nil r)  = sum t 
+                                === 1 + sum r ? subLemma_01 r
+                                *** QED
+
+{-@ subLemma_03 :: {t:Wavl | rk t == 0} -> {sum t == 1} @-}
+subLemma_03 :: Tree a -> ()
+subLemma_03 t@(Tree _ 0 Nil Nil) = ()
+
+{-@ subLemma_04 :: {t:Wavl | rk t == 1}  -> {sum t == 2} @-}
+subLemma_04 :: Tree a -> ()
+subLemma_04 t@(Tree _ 1 l r@Nil)  = sum t 
+                                === 1 + sum l ? subLemma_03 l
+                                -- === 2 
+                                *** QED
+subLemma_04 t@(Tree _ 1 l@Nil r)  = sum t 
+                                === 1 + sum r ? subLemma_03 r
+                                *** QED
+subLemma_04 t@(Tree _ 1 l r)  = sum t 
+                              === sum l + sum r ? subLemma_03 r ? subLemma_03 l
+                              === 1 + 1 *** QED
+
+
+{-@ lemmaSubSum :: l:Wavl2_2 -> {r:Wavl2_2 | rk l == rk r} -> { sum l == sum r } @-}
+lemmaSubSum :: Tree a -> Tree a -> Proof
+lemmaSubSum Nil Nil = trivial
+lemmaSubSum (Tree _ 0 Nil Nil) (Tree _ 0 Nil Nil) = trivial
+lemmaSubSum s@(Tree _ 1 l1 r1) t@(Tree _ 1 l2 r2) = sum s ? subLemma_02 s 
+                                                === 2 ? subLemma_02 t 
+                                                === sum t *** QED
+lemmaSubSum s@(Tree _ n l1 r1) t@(Tree _ m l2 r2) = sum s === sum l1 + sum r1 ? lemmaSubSum l1 l2 -- implicit lemma_04 s t
+                                                          === sum l2 + sum r1 ? lemmaSubSum r1 r2 
+                                                          === sum l2 + sum r2
+                                                          === sum t *** QED
 
 {-| Beweis für die Verbindung von den minimalen Bäumen zu normalen Bäumen |-}
--- {-@ lemmaMinTree2DefTree :: t:Wavl2_2 -> {t1:Wavl | rk t == rk t1 } -> {sum t <= sum t1 } @-}
--- lemmaMinTree2DefTree :: t:Tree a -> t1:Tree a -> ()
--- lemmaMinTree2DefTree t@Nil t1@Nil = ()
--- lemmaMinTree2DefTree t@(Tree _ 0 _ _) t1@(Tree _ 0 _ _) = ()
--- lemmaMinTree2DefTree t@(Tree _ 1 l r) t1@(Tree _ 1 l1 r1) = () -- => 9 cases!! => sub-beweis!
--- lemmaMinTree2DefTree t@(Tree _ n l r) t1@(Tree _ m l1 r1)
-    -- | isNode1_1 t1 = trivial 
-    -- | isNode1_2 t1 = trivial 
-    -- | isNode2_1 t1 = trivial 
+{-@ lemmaMinTree2DefTree :: t:Wavl2_2 -> {t1:Wavl | rk t == rk t1 } -> {sum t <= sum t1 } @-}
+lemmaMinTree2DefTree :: Tree a -> Tree a -> ()
+lemmaMinTree2DefTree s@Nil t@Nil = ()
+lemmaMinTree2DefTree s@(Tree _ 0 _ _) t@(Tree _ 0 _ _) = () ? subLemma_01 s ? subLemma_03 t 
+lemmaMinTree2DefTree s@(Tree _ 1 l r) t@(Tree _ 1 l1 r1) = () ? subLemma_02 s ? subLemma_04 t 
+lemmaMinTree2DefTree s@(Tree _ n l r) t@(Tree _ m l1 r1) = undefined -- TODO
 
 -- -- Beweis der logarithmischen Höhe: 
 -- {-@ lemmaheight2Log :: t:Wavl -> { rk t <= 2 * log2 (sum t) } @-}
