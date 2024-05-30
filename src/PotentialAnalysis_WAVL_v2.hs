@@ -42,7 +42,7 @@ pot :: Tick (Tree a) -> Int
 pot t = potT (tval t)
 
 {-@ measure rk @-}
-{-@ rk :: t:Tree a -> {v:Int | (empty t <=> v == (-1)) && ( not (empty t) <=> v >= 0 )} @-} -- && (v >= 0 => not (empty v))
+{-@ rk :: t:Tree a -> {v:Int | (empty t <=> v == (-1)) && ( not (empty t) <=> v >= 0 )} @-}
 rk :: Tree a -> Int
 rk Nil =  -1
 rk t@(Tree _ n _ _) = n
@@ -172,7 +172,7 @@ doubleDemoteL (Tree x n _ (Tree y m rl rr)) l = Tick (tcost l + 1) (Tree x (n-1)
 doubleDemoteR :: Tree a -> Tick (Tree a) -> Tick (Tree a)
 doubleDemoteR (Tree x n (Tree y m ll lr) _) r = Tick (tcost r) (Tree x (n-1) (Tree y (m-1) ll lr) (tval r))
 
-{-@ rotateLeftD :: {t:NEWavl | isNode2_1 t && child1 (right t) (right (right t))} -> {l:Tick (Wavl) |  child3 t (tval l)  && amortized (left t) l}  -> {v:Tick ({v':NEWavl | rkDiff t v' 0}) | rkDiff t (tval v) 0 && amortized3 t v} @-} 
+{-@ rotateLeftD :: {t:NEWavl | isNode2_1 t && child1 (right t) (right (right t))} -> {l:Tick (Wavl) |  child3 t (tval l)  && amortized (left t) l}  -> {v:Tick ({v':NEWavl | rkDiff t v' 0}) | rkDiff t (tval v) 0 && amortized2 t v} @-} 
 rotateLeftD :: Tree a -> Tick (Tree a) -> Tick (Tree a)
 rotateLeftD t@(Tree z n _ (Tree y m rl@Nil rr)) l@(Tick _ Nil) = Tick (tcost l) (Tree y (m+1) (leaf z) rr)
 rotateLeftD t@(Tree z n _ (Tree y m rl rr)) l = Tick (tcost l) (Tree y (m+1) (Tree z (n-1) (tval l) rl) rr )
@@ -181,7 +181,7 @@ rotateLeftD t@(Tree z n _ (Tree y m rl rr)) l = Tick (tcost l) (Tree y (m+1) (Tr
 rotateDoubleLeftD :: Tree a -> Tick (Tree a) -> Tick (Tree a)
 rotateDoubleLeftD (Tree z n _ (Tree y m (Tree x o rll rlr) rr)) l = Tick (tcost l) (Tree x n (Tree z (n-2) (tval l) rll) (Tree y (n-2) rlr rr))
 
-{-@ rotateRightD :: {t:NEWavl | isNode1_2 t && child1 (left t) (left (left t))} -> {r:Tick (Wavl) | child3 t (tval r) && amortized (right t) r} -> {v:Tick({v':NEWavl | rkDiff t v' 0}) | rkDiff t (tval v) 0 && amortized3 t v} @-} 
+{-@ rotateRightD :: {t:NEWavl | isNode1_2 t && child1 (left t) (left (left t))} -> {r:Tick (Wavl) | child3 t (tval r) && amortized (right t) r} -> {v:Tick({v':NEWavl | rkDiff t v' 0}) | rkDiff t (tval v) 0 && amortized2 t v} @-} 
 rotateRightD :: Tree a -> Tick (Tree a) -> Tick (Tree a)
 rotateRightD (Tree x n (Tree y m ll Nil) _) r@(Tick _ Nil) = Tick (tcost r) (Tree y (m+1) ll (leaf x))
 rotateRightD (Tree x n (Tree y m ll lr) _) r = Tick (tcost r) (Tree y (m+1) ll (Tree x (n-1) lr (tval r)))
