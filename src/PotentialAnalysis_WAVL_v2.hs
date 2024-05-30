@@ -27,7 +27,6 @@ structLemma :: Tree a -> Bool
 structLemma Nil = True
 structLemma t@(Tree _ n l r) = isWavlNode t && structLemma l && structLemma r 
 
--- potential analysis for deletion
 {-@ measure potT @-}
 {-@ potT :: t:Wavl -> Nat @-}
 potT :: Tree a -> Int
