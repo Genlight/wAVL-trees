@@ -448,7 +448,7 @@ heightProof t = ht t ? lowerHeightProof t
             =<= 2 * ht t  
             *** QED
 
--- taken code from Jamie HOCHRAINER
+-- taken code from Jamie HOCHRAINER's white paper, s. README.md for details
 {-@ type Pos = {n:Int | n >= 1} @-}
 
 {-@ reflect log2 @-}
@@ -468,12 +468,6 @@ powerOfTwo n = 2 * (powerOfTwo (n - 1))
 logPowP :: Int -> Proof
 logPowP 0 = ()
 logPowP n = logPowP (n-1) ?? ()
-
-{-@ reflect logAddProp @-}
-{-@ logAddProp :: x:Pos -> {log2 (2 * powerOfTwo x) == 1 + x} @-}
-logAddProp :: Int -> Proof
-logAddProp 1 = ()
-logAddProp x = logPowP x ?? ()
 
 {-@ reflect logMon @-}
 {-@ logMon :: x:Pos -> {y:Pos | x <= y} -> {log2 x <= log2 y} @-}
@@ -514,6 +508,7 @@ lemmaSum2Mintree t@(Tree _ n l r) = sum t
                                 === powerOfTwo ((div n 2)) 
                                 *** QED
 
+-- not in use
 {-@ lemma_03 :: { t:Wavl2_2 | rk t >= 2 } -> {rk (left t) == rk (right t)} @-}
 lemma_03 :: Tree a -> ()
 lemma_03 t@(Tree _ n l r) = rk t ? structLemma2_2 t ? rk t >= 2
@@ -521,6 +516,7 @@ lemma_03 t@(Tree _ n l r) = rk t ? structLemma2_2 t ? rk t >= 2
                         === rk l + 2
                         *** QED
 
+-- not needed
 {-@ lemma_04 :: { t:Wavl2_2 | rk t >= 2} -> { v:Wavl2_2 | rk v == rk t} -> {rk (left t) == rk (left v) && rk (right t) == rk (right v)} @-}
 lemma_04 :: Tree a -> Tree a -> ()
 lemma_04 t@(Tree _ n l1 r1) v@(Tree _ m l2 r2) = n
@@ -718,7 +714,7 @@ lemmaMinTree2DefTree s@(Tree _ n l r) t@(Tree _ m l1 r1)
                 === sum t 
                 *** QED
 
--- -- Beweis der logarithmischen Höhe: 
+-- Beweis der logarithmischen Höhe: 
 {-@ lemmaheight2Log :: {t:Wavl | not (empty t) && sum t >= 1} -> {v:Wavl2_2 | rk t == rk v && sum v >= 1} -> { rk t <= 2 * log2 (sum t) + 1 } @-}
 lemmaheight2Log :: Tree a -> Tree a -> Proof
 lemmaheight2Log t@(Tree _ n _ _) v@(Tree _ _ _ _) =
@@ -731,6 +727,7 @@ lemmaheight2Log t@(Tree _ n _ _) v@(Tree _ _ _ _) =
     === 2 * (div (rk t) 2) + 1
     =>= rk t *** QED
 
+-- not in use
 {-@ lemmaSum2Tree :: {s:Wavl2_2 | not (empty s)} -> {t:Wavl | rk s == rk t} -> {powerOfTwo (div (rk t) 2) <= sum t} @-}
 lemmaSum2Tree :: Tree a -> Tree a -> ()
 lemmaSum2Tree s t = sum t ? lemmaMinTree2DefTree s t
