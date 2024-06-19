@@ -24,7 +24,8 @@ library
     --   AVL,
       -- WAVL,
       -- PotentialAnalysis_WAVL
-    PotentialAnalysis_WAVL_v2
+    -- PotentialAnalysis_WAVL_v2
+    PotentialAnalysis_WAVL_v3
       -- RBTree 
       -- RBTree_v2
       -- BinomialHeap
