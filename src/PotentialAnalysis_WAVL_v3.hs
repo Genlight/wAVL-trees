@@ -4,7 +4,7 @@
 {-@ LIQUID "--ple" @-}
 {-@ LIQUID "--diff" @-}
 
-module PotentialAnalysis_WAVL_v2 where
+module PotentialAnalysis_WAVL_v3 where
 
 import Prelude hiding (pure, sum, max)
 import LogPow
