@@ -31,6 +31,8 @@ library
       -- BinomialHeap
     -- PopPush
     -- WAVL_v2
+  other-modules:
+    LogPow
   hs-source-dirs:
       src
   build-depends:

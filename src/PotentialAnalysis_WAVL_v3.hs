@@ -4,7 +4,7 @@
 {-@ LIQUID "--ple" @-}
 {-@ LIQUID "--diff" @-}
 
-module PotentialAnalysis_WAVL_v2 where
+module PotentialAnalysis_WAVL_v3 where
 
 import Prelude hiding (pure, sum, max)
 import LogPow
@@ -378,24 +378,24 @@ thm_ceilDiv2_minus2 a = if mod a 2 == 0 then () else ()
 
 
 {-@
-thm_size_help :: {t:Wavl | not (empty t)} -> {size t >= pow2 (ceilDiv2 (rk t))}
+co_size2rank :: {t:Wavl | not (empty t)} -> {size t >= pow2 (ceilDiv2 (rk t))}
 @-}
-thm_size_help :: Tree v -> ()
-thm_size_help (Tree _ 0 ll rr) = ()
-thm_size_help (Tree _ 1 ll rr) = case (ll, rr) of
+co_size2rank :: Tree v -> ()
+co_size2rank (Tree _ 0 ll rr) = ()
+co_size2rank (Tree _ 1 ll rr) = case (ll, rr) of
                               (Nil, Tree _ _ _ _) -> ()
                               (Tree _ _ _ _, Nil) -> ()
                               (Tree _ _ _ _, Tree _ _ _ _) -> ()
-thm_size_help t@(Tree _ r ll rr) =
+co_size2rank t@(Tree _ r ll rr) =
     prove $
          (ceilDiv2 (r - 2) == (ceilDiv2 r) - 1
              ? thm_ceilDiv2_minus2 r)
       && (size ll >= pow2 (ceilDiv2 r - 1)
-             ? ( thm_size_help ll
+             ? ( co_size2rank ll
                , thm_ceilDiv2_mon (rk ll) (r - 2)
                , pow2_mon (ceilDiv2 (rk ll)) (ceilDiv2 (r - 2))))
       && (size rr >= pow2 (ceilDiv2 r - 1)
-             ? ( thm_size_help rr
+             ? ( co_size2rank rr
                , thm_ceilDiv2_mon (rk rr) (r - 2)
                , pow2_mon (ceilDiv2 (rk rr)) (ceilDiv2 (r - 2))))
 
@@ -405,7 +405,7 @@ thm_size :: {t:Wavl | not (empty t)} -> {rk t <= 2 * log2 (size t)}
 thm_size :: Tree v -> ()
 thm_size t@(Tree _ _ _ _) = prove $
                                   (log2 (size t) >= log2 (pow2 (ceilDiv2 (rk t)))
-                                      ? ( thm_size_help t
+                                      ? ( co_size2rank t
                                         , log2_mon (pow2 (ceilDiv2 (rk t))) (size t)))
                                && (log2 (size t) >= ceilDiv2 (rk t)
                                       ? log2_pow2 (ceilDiv2 (rk t)))
